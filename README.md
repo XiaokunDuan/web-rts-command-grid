@@ -82,10 +82,8 @@ Available package scripts:
 
 ## Roadmap
 
-1. Add broader obstacle-aware pathfinding beyond one-step collision avoidance.
-2. Expand browser interaction coverage into combat resolution and win/loss flows.
-3. Tune UI feedback for placement validity, command target previews, and resource deltas.
-4. Improve responsive layout for desktop and mobile browser testing.
-5. Add audio only if it is original or permissively sourced with no protected
+1. Expand responsive browser coverage as the UI grows.
+2. Add explicit touch/mobile command controls if mobile gameplay becomes a goal.
+3. Add audio only if it is original or permissively sourced with no protected
    franchise names, motifs, music, or effects; otherwise keep the prototype
    silent.

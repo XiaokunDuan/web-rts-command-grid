@@ -29,6 +29,7 @@ let buildMode: BuildKind | null = null
 let dragStart: MapPoint | null = null
 let hoverTile: MapPoint | null = null
 let commandPreview: CommandPreview | null = null
+let previousCredits = state.credits
 
 app.innerHTML = `
   <main class="shell">
@@ -209,8 +210,11 @@ function renderStats(current: GameState): void {
   const selected = current.units.filter(unit => current.selectedIds.includes(unit.id))
   const playerUnits = current.units.filter(unit => unit.team === 'player').length
   const enemyUnits = current.units.filter(unit => unit.team === 'enemy').length
+  const creditDelta = current.credits - previousCredits
+  const creditDeltaText = creditDelta === 0 ? '' : `<span class="stat-delta ${creditDelta > 0 ? 'positive' : 'negative'}">${creditDelta > 0 ? '+' : ''}${creditDelta}</span>`
+  previousCredits = current.credits
   stats.innerHTML = `
-    <div><dt>Credits</dt><dd>${current.credits}</dd></div>
+    <div><dt>Credits</dt><dd>${current.credits}${creditDeltaText}</dd></div>
     <div><dt>Selected</dt><dd>${selected.length}</dd></div>
     <div><dt>Units</dt><dd>${playerUnits} / ${enemyUnits}</dd></div>
     <div><dt>Mode</dt><dd>${buildMode ?? 'command'}</dd></div>

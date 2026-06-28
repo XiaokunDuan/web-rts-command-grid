@@ -210,6 +210,18 @@ dl > div {
   padding-bottom: 6px;
 }
 
+.stat-delta {
+  display: inline-block;
+  min-width: 38px;
+  margin-left: 8px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.stat-delta.positive { color: #2f7b45; }
+.stat-delta.negative { color: #a22d24; }
+
 .actions {
   display: grid;
   gap: 10px;

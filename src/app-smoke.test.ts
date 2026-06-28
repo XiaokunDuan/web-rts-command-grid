@@ -126,6 +126,18 @@ describe('browser RTS smoke', () => {
     expect(placedTile.textContent).toContain('REFINERY')
     expect(document.querySelector('#status')?.textContent).toContain('refinery placed at 5,2.')
     expect(document.querySelector('#stats')?.textContent).toContain('Credits280')
+    expect(document.querySelector('.stat-delta.negative')?.textContent).toBe('-220')
+  })
+
+  it('shows positive credit deltas from resource income', async () => {
+    await loadApp()
+    document.querySelector<HTMLButtonElement>('[data-build="refinery"]')!.click()
+    pressTile(tileAt(5, 2))
+
+    await vi.advanceTimersByTimeAsync(550)
+
+    expect(document.querySelector('#stats')?.textContent).toContain('Credits288')
+    expect(document.querySelector('.stat-delta.positive')?.textContent).toBe('+8')
   })
 
   it('keeps build mode active and marks occupied placement as invalid', async () => {
@@ -168,6 +180,7 @@ describe('browser RTS smoke', () => {
     expect(document.querySelectorAll('.unit.player')).toHaveLength(3)
     expect(tileAt(4, 3).querySelector('.unit.player')).not.toBeNull()
     expect(document.querySelector('#stats')?.textContent).toContain('Credits120')
+    expect(document.querySelector('.stat-delta.negative')?.textContent).toBe('-120')
   })
 
   it('can resolve a browser combat order into a destroyed enemy unit', async () => {
