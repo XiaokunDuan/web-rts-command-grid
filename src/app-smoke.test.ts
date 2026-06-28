@@ -108,4 +108,18 @@ describe('browser RTS smoke', () => {
     expect(tileAt(4, 3).querySelector('.unit.player')).not.toBeNull()
     expect(document.querySelector('#stats')?.textContent).toContain('Credits120')
   })
+
+  it('can resolve a browser combat order into a destroyed enemy unit', async () => {
+    await loadApp()
+    tileAt(2, 3).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+    tileAt(5, 5).dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }))
+
+    rightClickTile(tileAt(12, 6))
+    expect(document.querySelector('#status')?.textContent).toContain('Attack order on target 5.')
+
+    await vi.advanceTimersByTimeAsync(9000)
+
+    expect(tileAt(12, 6).querySelector('.unit.enemy')).toBeNull()
+    expect(document.querySelectorAll('.unit.enemy')).toHaveLength(1)
+  })
 })
