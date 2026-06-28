@@ -1,0 +1,39 @@
+
+  Scanning ....
+
+  Project Profile:
+    Languages:   typescript, javascript
+    Frameworks:  vite
+    CI/CD:       none
+    Tests:       vitest
+    Issues:      github
+    README:      yes
+    Docs:        no
+    Code Roots:  src
+
+  Project Intent:
+    Name:        web-rts-command-grid
+    Summary:     Maintain and advance web-rts-command-grid
+    Docs:        README.md, package.json
+    Themes:
+      - Keep README, docs, and changelog consistent with current implementation and release state
+      - Continuously keep tests, CI, build, and release pipelines operational - not just surface fixes
+      - Continuously review core code directories src for structural issues blocking the roadmap
+      - Continuously absorb signals from issues / feedback / discussions and convert external problems into actionable tasks
+      - After any single metric reaches a local optimum, return to the global mission and find the next batch of high-value tasks
+  [local] Created git worktree at /Users/ylusky/code/active_projects/web-rts-command-grid/.wanman/worktree
+
+  Runtime: codex
+  Goal: 开发一个原创网页版即时战略游戏原型，玩法受经典基地建设 RTS 启发：资源采集、基地建造、建筑生产、单位选择与框选、移动、攻击、生命值、简单敌方 AI、可在浏览器运行。必须使用原创名称、原创视觉、原创单位、原创音效或无音效；不要使用红色警戒、Command & Conquer 或任何受版权/商标保护的名称、素材、图标、音频、阵营、单位身份或剧情。优先交付可玩的浏览器原型，保留清晰代码结构和 build/test 脚本。
+
+  Agents:
+    [enabled] ceo (24/7) - Always enabled - responsible for long-term mission orchestration and backlog generation
+    [enabled] cto (on-demand) - Always enabled - responsible for PR review with coverage gate and merge decisions
+    [enabled] dev (on-demand) - Always enabled - responsible for actual code implementation and verification
+    [enabled] devops (24/7) - CI / build / test entry points detected - suitable for continuous pipeline guardianship
+    [enabled] feedback (24/7) - Continuously mining backlog from issues, roadmap, TODOs, and docs
+    [enabled] marketing (24/7) - README/docs detected - continuous maintenance of external narrative required
+
+  Overlay: /Users/ylusky/code/active_projects/web-rts-command-grid/.wanman
+
+  Dry run complete. Generated takeover overlay at /Users/ylusky/code/active_projects/web-rts-command-grid/.wanman
