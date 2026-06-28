@@ -1,10 +1,12 @@
 export type Team = 'player' | 'enemy'
+export type UnitKind = 'ranger' | 'lancer'
 
 type MapPoint = { x: number; y: number }
 
 export interface Unit {
   id: number
   team: Team
+  kind: UnitKind
   x: number
   y: number
   hp: number
@@ -55,6 +57,10 @@ export interface GameState {
 export const MAP_WIDTH = 16
 export const MAP_HEIGHT = 10
 const HARVESTER_CAPACITY = 30
+export const UNIT_BLUEPRINTS: Record<UnitKind, { label: string; cost: number; hp: number; attack: number; range: number }> = {
+  ranger: { label: 'Ranger', cost: 120, hp: 120, attack: 18, range: 1 },
+  lancer: { label: 'Lancer', cost: 180, hp: 90, attack: 26, range: 2 },
+}
 
 export function createInitialState(): GameState {
   return {
@@ -68,10 +74,10 @@ export function createInitialState(): GameState {
       { id: 2, team: 'enemy', kind: 'hq', x: 13, y: 7, hp: 900, maxHp: 900 },
     ],
     units: [
-      { id: 3, team: 'player', x: 3, y: 4, hp: 120, maxHp: 120, attack: 18, range: 1 },
-      { id: 4, team: 'player', x: 4, y: 4, hp: 120, maxHp: 120, attack: 18, range: 1 },
-      { id: 5, team: 'enemy', x: 12, y: 6, hp: 110, maxHp: 110, attack: 16, range: 1 },
-      { id: 6, team: 'enemy', x: 11, y: 7, hp: 110, maxHp: 110, attack: 16, range: 1 },
+      createUnit(3, 'player', 'ranger', { x: 3, y: 4 }),
+      createUnit(4, 'player', 'ranger', { x: 4, y: 4 }),
+      createUnit(5, 'enemy', 'ranger', { x: 12, y: 6 }),
+      createUnit(6, 'enemy', 'ranger', { x: 11, y: 7 }),
     ],
     harvesters: [
       createHarvester(7, 'player', { x: 2, y: 2 }),
@@ -118,16 +124,16 @@ export function buildStructure(state: GameState, kind: 'refinery' | 'barracks', 
   }
 }
 
-export function trainUnit(state: GameState): GameState {
-  const cost = 120
+export function trainUnit(state: GameState, kind: UnitKind = 'ranger'): GameState {
+  const blueprint = UNIT_BLUEPRINTS[kind]
   const hasBarracks = state.buildings.some(b => b.team === 'player' && b.kind === 'barracks')
-  if (!hasBarracks || !canAfford(state, cost)) return state
+  if (!hasBarracks || !canAfford(state, blueprint.cost)) return state
   const spawn = nearestOpenTile(state, { x: 4, y: 3 })
   return {
     ...state,
-    credits: state.credits - cost,
+    credits: state.credits - blueprint.cost,
     nextId: state.nextId + 1,
-    units: [...state.units, { id: state.nextId, team: 'player', ...spawn, hp: 120, maxHp: 120, attack: 18, range: 1 }],
+    units: [...state.units, createUnit(state.nextId, 'player', kind, spawn)],
   }
 }
 
@@ -209,7 +215,7 @@ function enemyPlan(state: GameState): GameState {
       ...next,
       enemyCredits: next.enemyCredits - 100,
       nextId: next.nextId + 1,
-      units: [...next.units, { id: next.nextId, team: 'enemy', ...spawn, hp: 110, maxHp: 110, attack: 16, range: 1, target: { x: 3, y: 3 } }],
+      units: [...next.units, { ...createUnit(next.nextId, 'enemy', 'ranger', spawn), target: { x: 3, y: 3 } }],
     }
   }
   return {
@@ -354,6 +360,20 @@ function nearestOpenTile(state: GameState, start: MapPoint): MapPoint {
 
 function isOccupied(state: GameState, x: number, y: number): boolean {
   return state.units.some(unit => unit.x === x && unit.y === y) || state.buildings.some(building => building.x === x && building.y === y)
+}
+
+function createUnit(id: number, team: Team, kind: UnitKind, point: MapPoint): Unit {
+  const blueprint = UNIT_BLUEPRINTS[kind]
+  return {
+    id,
+    team,
+    kind,
+    ...point,
+    hp: blueprint.hp,
+    maxHp: blueprint.hp,
+    attack: blueprint.attack,
+    range: blueprint.range,
+  }
 }
 
 function createHarvester(id: number, team: Team, point: MapPoint): HarvestWorker {

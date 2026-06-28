@@ -2,6 +2,7 @@ import './styles.css'
 import {
   MAP_HEIGHT,
   MAP_WIDTH,
+  UNIT_BLUEPRINTS,
   buildStructure,
   createInitialState,
   issueAttack,
@@ -10,6 +11,7 @@ import {
   stepGame,
   trainUnit,
   type GameState,
+  type UnitKind,
 } from './game'
 
 type BuildKind = 'refinery' | 'barracks'
@@ -24,7 +26,22 @@ const BUILD_COSTS: Record<BuildKind, number> = {
 const app = document.querySelector<HTMLDivElement>('#app')
 if (!app) throw new Error('Missing #app root')
 
-let state = createInitialState()
+function createScenarioState(): GameState {
+  const initial = createInitialState()
+  const scenario = new URLSearchParams(window.location.search).get('scenario')
+  if (scenario !== 'player-defeat-smoke') return initial
+  return {
+    ...initial,
+    buildings: initial.buildings.map(building => building.team === 'player' && building.kind === 'hq'
+      ? { ...building, hp: 14, maxHp: 14 }
+      : building),
+    units: initial.units.map(unit => unit.id === 5
+      ? { ...unit, x: 2, y: 3, attack: 20, attackTargetId: 1, target: undefined }
+      : unit),
+  }
+}
+
+let state = createScenarioState()
 let buildMode: BuildKind | null = null
 let dragStart: MapPoint | null = null
 let hoverTile: MapPoint | null = null
@@ -44,7 +61,8 @@ app.innerHTML = `
       <div class="actions">
         <button type="button" data-build="refinery">Build Refinery (220)</button>
         <button type="button" data-build="barracks">Build Barracks (260)</button>
-        <button type="button" id="train">Train Ranger (120)</button>
+        <button type="button" data-train="ranger">Train Ranger (120)</button>
+        <button type="button" data-train="lancer">Train Lancer (180)</button>
       </div>
       <div class="help">
         <strong>Controls</strong>
@@ -69,11 +87,17 @@ document.querySelectorAll<HTMLButtonElement>('[data-build]').forEach(button => {
   })
 })
 
-document.querySelector<HTMLButtonElement>('#train')!.addEventListener('click', () => {
-  const before = state.units.length
-  state = trainUnit(state)
-  status.textContent = state.units.length > before ? 'Ranger deployed from the barracks.' : 'Build a barracks and save 120 credits before training.'
-  render()
+document.querySelectorAll<HTMLButtonElement>('[data-train]').forEach(button => {
+  button.addEventListener('click', () => {
+    const kind = button.dataset.train as UnitKind
+    const blueprint = UNIT_BLUEPRINTS[kind]
+    const before = state.units.length
+    state = trainUnit(state, kind)
+    status.textContent = state.units.length > before
+      ? `${blueprint.label} deployed from the barracks.`
+      : `Build a barracks and save ${blueprint.cost} credits before training ${blueprint.label}.`
+    render()
+  })
 })
 
 window.addEventListener('keydown', event => {
@@ -229,9 +253,10 @@ function renderStats(current: GameState): void {
     delivery.textContent = 'Harvesters are scouting ore routes.'
   }
   for (const button of actionButtons) {
-    if (button.id === 'train') {
+    const trainKind = button.dataset.train as UnitKind | undefined
+    if (trainKind) {
       const hasBarracks = current.buildings.some(building => building.team === 'player' && building.kind === 'barracks')
-      button.disabled = !hasBarracks || current.credits < 120
+      button.disabled = !hasBarracks || current.credits < UNIT_BLUEPRINTS[trainKind].cost
     } else {
       const kind = button.dataset.build
       const cost = kind === 'refinery' ? 220 : 260
@@ -271,7 +296,8 @@ function renderMap(current: GameState): void {
       for (const unit of units) {
         const stateClass = unit.attackTargetId ? ' attacking' : unit.target ? ' moving' : ''
         const selected = current.selectedIds.includes(unit.id) ? ' selected' : ''
-        pieces.push(`<span class="unit ${unit.team}${selected}${stateClass}">●${renderHealthBar(unit.hp, unit.maxHp)}</span>`)
+        const unitLabel = unit.kind === 'lancer' ? 'L' : 'R'
+        pieces.push(`<span class="unit ${unit.team} ${unit.kind}${selected}${stateClass}">${unitLabel}${renderHealthBar(unit.hp, unit.maxHp)}</span>`)
       }
       if (placementFeedback) pieces.push(`<span class="placement-ghost">${placementFeedback.label}</span>`)
       if (visibleCommandPreview) pieces.push(`<span class="command-marker ${visibleCommandPreview.kind}" aria-hidden="true"></span>`)
@@ -279,6 +305,7 @@ function renderMap(current: GameState): void {
         `tile ${x},${y}`,
         ore ? `${ore.amount} ore remaining` : '',
         harvesters.length > 0 ? `${harvesters.length} harvester${harvesters.length === 1 ? '' : 's'}` : '',
+        units.length > 0 ? units.map(unit => UNIT_BLUEPRINTS[unit.kind].label).join(' and ') : '',
         placementFeedback ? placementFeedback.message : '',
         visibleCommandPreview ? `${visibleCommandPreview.kind} command target` : '',
       ].filter(Boolean).join(', ')

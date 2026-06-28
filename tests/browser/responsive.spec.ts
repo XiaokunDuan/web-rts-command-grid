@@ -7,7 +7,8 @@ test.describe('responsive command grid', () => {
     await expect(page.locator('.tile')).toHaveCount(160)
     await expect(page.locator('#status')).toContainText('Establish the outpost')
     await expect(page.locator('[data-build="refinery"]')).toBeVisible()
-    await expect(page.locator('#train')).toBeVisible()
+    await expect(page.locator('[data-train="ranger"]')).toBeVisible()
+    await expect(page.locator('[data-train="lancer"]')).toBeVisible()
 
     const overflow = await page.evaluate(() => ({
       body: document.body.scrollWidth,
@@ -83,5 +84,26 @@ test.describe('responsive command grid', () => {
     await expect(page.locator('#delivery')).toContainText('Delivered +30 credits', { timeout: 6000 })
     await expect(page.locator('#stats')).toContainText('Credits310')
     await expect(page.locator('[data-x="6"][data-y="2"]')).toContainText('870')
+  })
+
+  test('trains the lancer production choice in the browser', async ({ page }) => {
+    await page.goto('/')
+
+    await page.locator('[data-build="barracks"]').click()
+    await page.locator('[data-x="5"][data-y="4"]').click()
+    await expect(page.locator('#stats')).toContainText('Credits240')
+
+    await page.locator('[data-train="lancer"]').click()
+
+    await expect(page.locator('#status')).toContainText('Lancer deployed from the barracks.')
+    await expect(page.locator('[data-x="4"][data-y="3"] .unit.player.lancer')).toBeVisible()
+    await expect(page.locator('#stats')).toContainText('Credits60')
+  })
+
+  test('surfaces the player defeat flow in the browser', async ({ page }) => {
+    await page.goto('/?scenario=player-defeat-smoke')
+
+    await expect(page.locator('#status')).toContainText('Defeat: your HQ fell.', { timeout: 2500 })
+    await expect(page.locator('[data-x="2"][data-y="2"] .building-label')).toHaveCount(0)
   })
 })

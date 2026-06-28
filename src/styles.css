@@ -146,7 +146,14 @@ body { margin: 0; }
   line-height: 1;
 }
 
+.unit.lancer {
+  border-radius: 6px;
+  background: #dfe7f0;
+  color: #1f3a54;
+}
+
 .unit.enemy { background: #df8b81; }
+.unit.enemy.lancer { background: #c8687a; }
 .unit.selected { outline: 3px solid #fff56a; }
 .unit.moving { box-shadow: 0 0 0 4px rgba(255,255,255,.45); }
 .unit.attacking { box-shadow: 0 0 0 4px rgba(185,36,24,.55); }

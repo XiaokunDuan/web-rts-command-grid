@@ -14,14 +14,15 @@ content.
 
 The current browser build is a playable Vite/TypeScript skirmish prototype. It
 renders a 16x10 command grid with player and enemy HQs, ore nodes, starter
-Ranger units, credits, unit counts, selected-unit state, build mode, and win/loss
-status.
+Ranger units, credits, unit counts, selected-unit state, build mode, production
+choices, and win/loss status.
 
 The implemented loop includes visible autonomous harvesters, ore depletion,
-delivery feedback, refinery and barracks placement, Ranger production, single
-selection, box selection, right-click movement, right-click attack orders, HP
-damage, destroyed-unit cleanup, HQ-based victory checks, and a simple enemy
-planner that builds, produces, targets, and advances toward the player.
+delivery feedback, refinery and barracks placement, Ranger and Lancer
+production, single selection, box selection, right-click movement, right-click
+attack orders, HP damage, destroyed-unit cleanup, HQ-based victory checks, and a
+simple enemy planner that builds, produces, targets, and advances toward the
+player.
 
 See [CHANGELOG.md](CHANGELOG.md) for the concise prototype state history.
 
@@ -72,8 +73,9 @@ Available package scripts:
 - `pnpm test`: run the Vitest suite once, including pure game-state tests and
   jsdom browser smoke tests for rendering, selection, movement feedback,
   drag-selection, and building placement.
-- `pnpm test:browser`: run Playwright checks for responsive layout and
-  browser-visible command/economy interactions.
+- `pnpm test:browser`: run Playwright checks against the production build for
+  responsive layout, command/economy interactions, production choices, and
+  win/loss flows. Run `pnpm build` first when `dist/` is missing or stale.
 - `pnpm preview`: serve the production build locally.
 
 ## Known Prototype Limits

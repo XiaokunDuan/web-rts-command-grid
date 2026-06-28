@@ -20,6 +20,17 @@ describe('RTS game state', () => {
     expect(state.units.filter(unit => unit.team === 'player')).toHaveLength(3)
   })
 
+  it('trains lancer units as a distinct production choice', () => {
+    let state = createInitialState()
+    state = buildStructure(state, 'barracks', 5, 4)
+
+    state = trainUnit(state, 'lancer')
+
+    const lancer = state.units.at(-1)
+    expect(state.credits).toBe(60)
+    expect(lancer).toMatchObject({ team: 'player', kind: 'lancer', hp: 90, maxHp: 90, attack: 26, range: 2 })
+  })
+
   it('selects a squad and assigns movement orders', () => {
     let state = createInitialState()
     state = selectInBox(state, { x: 2, y: 3 }, { x: 5, y: 5 })

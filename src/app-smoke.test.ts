@@ -25,6 +25,31 @@ async function loadApp(options: { enemyHqHp?: number } = {}) {
   await import('./main')
 }
 
+async function loadAppWithPlayerHqHp(hp: number) {
+  vi.resetModules()
+  vi.doUnmock('./game')
+  document.body.innerHTML = '<div id="app"></div>'
+  vi.doMock('./game', async importOriginal => {
+    const actual = await importOriginal<typeof import('./game')>()
+    return {
+      ...actual,
+      createInitialState: () => {
+        const initial = createDefaultInitialState()
+        return {
+          ...initial,
+          buildings: initial.buildings.map(building => building.team === 'player' && building.kind === 'hq'
+            ? { ...building, hp, maxHp: hp }
+            : building),
+          units: initial.units.map(unit => unit.id === 5
+            ? { ...unit, x: 2, y: 3, attack: 20, attackTargetId: 1, target: undefined }
+            : unit),
+        }
+      },
+    }
+  })
+  await import('./main')
+}
+
 function tileAt(x: number, y: number): HTMLElement {
   return document.querySelector<HTMLElement>(`[data-x="${x}"][data-y="${y}"]`)!
 }
@@ -55,7 +80,8 @@ describe('browser RTS smoke', () => {
     await loadApp()
     expect(document.querySelectorAll('.tile')).toHaveLength(160)
     expect(document.querySelector('[data-build="refinery"]')).not.toBeNull()
-    expect(document.querySelector('#train')).not.toBeNull()
+    expect(document.querySelector('[data-train="ranger"]')).not.toBeNull()
+    expect(document.querySelector('[data-train="lancer"]')).not.toBeNull()
     expect(document.querySelector('.unit.player')).not.toBeNull()
     expect(document.querySelector('.unit.enemy')).not.toBeNull()
     expect(document.querySelector('.harvester.player')).not.toBeNull()
@@ -162,7 +188,7 @@ describe('browser RTS smoke', () => {
 
   it('places a barracks and enables Ranger training deployment', async () => {
     await loadApp()
-    const trainButton = document.querySelector<HTMLButtonElement>('#train')!
+    const trainButton = document.querySelector<HTMLButtonElement>('[data-train="ranger"]')!
     expect(trainButton.disabled).toBe(true)
 
     document.querySelector<HTMLButtonElement>('[data-build="barracks"]')!.click()
@@ -185,6 +211,23 @@ describe('browser RTS smoke', () => {
     expect(tileAt(4, 3).querySelector('.unit.player')).not.toBeNull()
     expect(document.querySelector('#stats')?.textContent).toContain('Credits120')
     expect(document.querySelector('.stat-delta.negative')?.textContent).toBe('-120')
+  })
+
+  it('trains a visible Lancer from the barracks', async () => {
+    await loadApp()
+    document.querySelector<HTMLButtonElement>('[data-build="barracks"]')!.click()
+    pressTile(tileAt(5, 4))
+
+    const lancerButton = document.querySelector<HTMLButtonElement>('[data-train="lancer"]')!
+    expect(lancerButton.disabled).toBe(false)
+
+    lancerButton.click()
+
+    expect(document.querySelector('#status')?.textContent).toContain('Lancer deployed from the barracks.')
+    expect(document.querySelectorAll('.unit.player')).toHaveLength(3)
+    expect(tileAt(4, 3).querySelector('.unit.player.lancer')).not.toBeNull()
+    expect(document.querySelector('#stats')?.textContent).toContain('Credits60')
+    expect(document.querySelector('.stat-delta.negative')?.textContent).toBe('-180')
   })
 
   it('can resolve a browser combat order into a destroyed enemy unit', async () => {
@@ -227,5 +270,15 @@ describe('browser RTS smoke', () => {
     expect(tileAt(13, 7).classList.contains('enemy')).toBe(false)
     expect(tileAt(13, 7).querySelector('.building-label')).toBeNull()
     expect(document.querySelector('#status')?.textContent).toContain('Victory: rival HQ destroyed.')
+  })
+
+  it('surfaces a defeat state when the player HQ falls', async () => {
+    await loadAppWithPlayerHqHp(14)
+
+    await vi.advanceTimersByTimeAsync(550)
+
+    expect(tileAt(2, 2).classList.contains('player')).toBe(false)
+    expect(tileAt(2, 2).querySelector('.building-label')).toBeNull()
+    expect(document.querySelector('#status')?.textContent).toContain('Defeat: your HQ fell.')
   })
 })
