@@ -19,6 +19,10 @@ function rightClickTile(tile: HTMLElement): void {
   tile.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }))
 }
 
+function hoverTile(tile: HTMLElement): void {
+  tile.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+}
+
 describe('browser RTS smoke', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -58,6 +62,20 @@ describe('browser RTS smoke', () => {
 
     expect(document.querySelector('#status')?.textContent).toContain('Attack order on target 5.')
     expect(document.querySelector('.unit.player.attacking')).not.toBeNull()
+    expect(tileAt(12, 6).classList.contains('command-attack')).toBe(true)
+    expect(tileAt(12, 6).querySelector('.command-marker.attack')).not.toBeNull()
+  })
+
+  it('previews move commands while hovering with a selected unit', async () => {
+    await loadApp()
+    pressTile(tileAt(3, 4))
+
+    hoverTile(tileAt(8, 4))
+
+    expect(tileAt(8, 4).classList.contains('command-hover')).toBe(true)
+    expect(tileAt(8, 4).classList.contains('command-move')).toBe(true)
+    expect(tileAt(8, 4).getAttribute('aria-label')).toContain('move command target')
+    expect(tileAt(8, 4).querySelector('.command-marker.move')).not.toBeNull()
   })
 
   it('drag-selects the starter squad from the map', async () => {
@@ -75,6 +93,12 @@ describe('browser RTS smoke', () => {
     document.querySelector<HTMLButtonElement>('[data-build="refinery"]')!.click()
 
     expect(document.querySelector('#status')?.textContent).toContain('Placing refinery')
+    hoverTile(tileAt(5, 2))
+
+    expect(tileAt(5, 2).classList.contains('placement-preview')).toBe(true)
+    expect(tileAt(5, 2).classList.contains('valid')).toBe(true)
+    expect(tileAt(5, 2).textContent).toContain('REFINERY')
+    expect(tileAt(5, 2).getAttribute('aria-label')).toContain('refinery can be placed at 5,2.')
 
     pressTile(tileAt(5, 2))
 
@@ -83,6 +107,22 @@ describe('browser RTS smoke', () => {
     expect(placedTile.textContent).toContain('REFINERY')
     expect(document.querySelector('#status')?.textContent).toContain('refinery placed at 5,2.')
     expect(document.querySelector('#stats')?.textContent).toContain('Credits280')
+  })
+
+  it('keeps build mode active and marks occupied placement as invalid', async () => {
+    await loadApp()
+    document.querySelector<HTMLButtonElement>('[data-build="barracks"]')!.click()
+    hoverTile(tileAt(2, 2))
+
+    expect(tileAt(2, 2).classList.contains('placement-preview')).toBe(true)
+    expect(tileAt(2, 2).classList.contains('invalid')).toBe(true)
+    expect(tileAt(2, 2).textContent).toContain('BLOCKED')
+
+    pressTile(tileAt(2, 2))
+
+    expect(document.querySelector('#status')?.textContent).toContain('Cannot place barracks at 2,2')
+    expect(document.querySelector('#stats')?.textContent).toContain('Modebarracks')
+    expect(tileAt(2, 2).classList.contains('barracks')).toBe(false)
   })
 
   it('places a barracks and enables Ranger training deployment', async () => {

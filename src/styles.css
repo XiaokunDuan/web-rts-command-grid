@@ -45,6 +45,32 @@ body { margin: 0; }
   z-index: 2;
 }
 
+.tile.placement-preview.valid {
+  outline: 3px solid #f4f0bd;
+  box-shadow: inset 0 0 0 3px rgba(47,154,80,.65);
+}
+
+.tile.placement-preview.invalid {
+  outline: 3px solid #f1b3a8;
+  box-shadow: inset 0 0 0 3px rgba(185,36,24,.72);
+}
+
+.tile.command-preview {
+  outline: 3px solid #f4f0bd;
+}
+
+.tile.command-move {
+  box-shadow: inset 0 0 0 3px rgba(38,102,163,.68);
+}
+
+.tile.command-attack {
+  box-shadow: inset 0 0 0 3px rgba(185,36,24,.72);
+}
+
+.tile.command-issued {
+  outline-style: dashed;
+}
+
 .tile.ore { background: #c9b84d; }
 .tile.player { box-shadow: inset 0 0 0 2px #2666a3; }
 .tile.enemy { box-shadow: inset 0 0 0 2px #9b3430; }
@@ -54,7 +80,9 @@ body { margin: 0; }
 
 .ore-label,
 .building-label,
-.unit {
+.unit,
+.placement-ghost,
+.command-marker {
   position: absolute;
   display: grid;
   place-items: center;
@@ -115,6 +143,41 @@ body { margin: 0; }
 .unit.selected { outline: 3px solid #fff56a; }
 .unit.moving { box-shadow: 0 0 0 4px rgba(255,255,255,.45); }
 .unit.attacking { box-shadow: 0 0 0 4px rgba(185,36,24,.55); }
+
+.placement-ghost {
+  inset: 9px;
+  border: 2px dashed rgba(24,32,27,.72);
+  background: rgba(255,255,255,.32);
+  color: #18201b;
+  font-size: 10px;
+  text-align: center;
+}
+
+.placement-preview.invalid .placement-ghost {
+  border-color: rgba(185,36,24,.85);
+  color: #7b1d18;
+}
+
+.command-marker {
+  width: 20px;
+  height: 20px;
+  left: calc(50% - 10px);
+  top: calc(50% - 10px);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.command-marker.move {
+  border: 3px solid #2666a3;
+  background: rgba(255,255,255,.36);
+}
+
+.command-marker.attack {
+  border: 3px solid #b92418;
+  background:
+    linear-gradient(45deg, transparent 42%, #b92418 42%, #b92418 58%, transparent 58%),
+    linear-gradient(-45deg, transparent 42%, #b92418 42%, #b92418 58%, transparent 58%);
+}
 
 .panel {
   padding: 18px;

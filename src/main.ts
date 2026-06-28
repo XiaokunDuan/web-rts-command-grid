@@ -12,12 +12,23 @@ import {
   type GameState,
 } from './game'
 
+type BuildKind = 'refinery' | 'barracks'
+type MapPoint = { x: number; y: number }
+type CommandPreview = MapPoint & { kind: 'move' | 'attack' }
+
+const BUILD_COSTS: Record<BuildKind, number> = {
+  refinery: 220,
+  barracks: 260,
+}
+
 const app = document.querySelector<HTMLDivElement>('#app')
 if (!app) throw new Error('Missing #app root')
 
 let state = createInitialState()
-let buildMode: 'refinery' | 'barracks' | null = null
-let dragStart: { x: number; y: number } | null = null
+let buildMode: BuildKind | null = null
+let dragStart: MapPoint | null = null
+let hoverTile: MapPoint | null = null
+let commandPreview: CommandPreview | null = null
 
 app.innerHTML = `
   <main class="shell">
@@ -48,8 +59,10 @@ const actionButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.
 
 document.querySelectorAll<HTMLButtonElement>('[data-build]').forEach(button => {
   button.addEventListener('click', () => {
-    buildMode = button.dataset.build as 'refinery' | 'barracks'
+    buildMode = button.dataset.build as BuildKind
+    commandPreview = null
     status.textContent = `Placing ${buildMode}. Click a clear map tile, or press Escape to cancel.`
+    render()
   })
 })
 
@@ -62,8 +75,13 @@ document.querySelector<HTMLButtonElement>('#train')!.addEventListener('click', (
 
 window.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
+    const hadBuildMode = Boolean(buildMode)
+    const hadSelection = state.selectedIds.length > 0
     buildMode = null
+    dragStart = null
+    commandPreview = null
     state = { ...state, selectedIds: [] }
+    status.textContent = hadBuildMode ? 'Placement canceled.' : hadSelection ? 'Selection cleared.' : 'Command mode ready.'
     render()
   }
 })
@@ -75,6 +93,60 @@ function tileFromEvent(event: MouseEvent): { x: number; y: number } | null {
   return { x: Number(tile.dataset.x), y: Number(tile.dataset.y) }
 }
 
+function sameTile(a: MapPoint | null, b: MapPoint | null): boolean {
+  return Boolean(a && b && a.x === b.x && a.y === b.y)
+}
+
+function tileIsOccupied(current: GameState, tile: MapPoint): boolean {
+  return current.units.some(unit => unit.x === tile.x && unit.y === tile.y)
+    || current.buildings.some(building => building.x === tile.x && building.y === tile.y)
+}
+
+function getPlacementFeedback(current: GameState, kind: BuildKind, tile: MapPoint): { valid: boolean; label: string; message: string } {
+  const cost = BUILD_COSTS[kind]
+  if (current.credits < cost) {
+    return {
+      valid: false,
+      label: 'NEED',
+      message: `Need ${cost - current.credits} more credits for ${kind}.`,
+    }
+  }
+  if (tileIsOccupied(current, tile)) {
+    return {
+      valid: false,
+      label: 'BLOCKED',
+      message: `Cannot place ${kind} at ${tile.x},${tile.y}; the tile is occupied.`,
+    }
+  }
+  return {
+    valid: true,
+    label: kind.toUpperCase(),
+    message: `${kind} can be placed at ${tile.x},${tile.y}.`,
+  }
+}
+
+function findEnemyAt(current: GameState, tile: MapPoint) {
+  return [...current.units, ...current.buildings].find(candidate => candidate.team === 'enemy' && candidate.x === tile.x && candidate.y === tile.y)
+}
+
+function commandPreviewForTile(current: GameState, tile: MapPoint): CommandPreview {
+  return { ...tile, kind: findEnemyAt(current, tile) ? 'attack' : 'move' }
+}
+
+map.addEventListener('mouseover', event => {
+  if (dragStart) return
+  const tile = tileFromEvent(event)
+  if (!tile || sameTile(hoverTile, tile)) return
+  hoverTile = tile
+  render()
+})
+
+map.addEventListener('mouseleave', () => {
+  if (!hoverTile) return
+  hoverTile = null
+  render()
+})
+
 map.addEventListener('mousedown', event => {
   if (event.button !== 0) return
   dragStart = tileFromEvent(event)
@@ -84,10 +156,17 @@ map.addEventListener('mouseup', event => {
   const tile = tileFromEvent(event)
   if (!tile || event.button !== 0) return
   if (buildMode) {
-    const before = state.buildings.length
-    state = buildStructure(state, buildMode, tile.x, tile.y)
-    status.textContent = state.buildings.length > before ? `${buildMode} placed at ${tile.x},${tile.y}.` : `Cannot place ${buildMode} there. Check credits and clear tiles.`
-    buildMode = null
+    const feedback = getPlacementFeedback(state, buildMode, tile)
+    if (feedback.valid) {
+      state = buildStructure(state, buildMode, tile.x, tile.y)
+      status.textContent = `${buildMode} placed at ${tile.x},${tile.y}.`
+      buildMode = null
+      hoverTile = null
+    } else {
+      hoverTile = tile
+      status.textContent = feedback.message
+    }
+    dragStart = null
     render()
     return
   }
@@ -95,9 +174,11 @@ map.addEventListener('mouseup', event => {
   if (unit && dragStart && dragStart.x === tile.x && dragStart.y === tile.y) {
     state = { ...state, selectedIds: [unit.id] }
     status.textContent = `Selected unit ${unit.id}.`
+    commandPreview = null
   } else if (dragStart) {
     state = selectInBox(state, dragStart, tile)
     status.textContent = state.selectedIds.length > 0 ? `Selected ${state.selectedIds.length} units.` : 'No units selected.'
+    commandPreview = null
   }
   dragStart = null
   render()
@@ -107,7 +188,8 @@ map.addEventListener('contextmenu', event => {
   event.preventDefault()
   const tile = tileFromEvent(event)
   if (!tile || state.selectedIds.length === 0) return
-  const enemy = [...state.units, ...state.buildings].find(candidate => candidate.team === 'enemy' && candidate.x === tile.x && candidate.y === tile.y)
+  const enemy = findEnemyAt(state, tile)
+  commandPreview = { ...tile, kind: enemy ? 'attack' : 'move' }
   state = enemy ? issueAttack(state, enemy.id) : issueMove(state, tile.x, tile.y)
   status.textContent = enemy ? `Attack order on target ${enemy.id}.` : `Move order to ${tile.x},${tile.y}.`
   render()
@@ -153,9 +235,17 @@ function renderMap(current: GameState): void {
       const ore = current.ore.find(node => node.x === x && node.y === y && node.amount > 0)
       const building = current.buildings.find(item => item.x === x && item.y === y)
       const units = current.units.filter(item => item.x === x && item.y === y)
+      const tile = { x, y }
+      const placementFeedback = buildMode && sameTile(hoverTile, tile) ? getPlacementFeedback(current, buildMode, tile) : null
+      const hoverCommandPreview = !buildMode && current.selectedIds.length > 0 && sameTile(hoverTile, tile) ? commandPreviewForTile(current, tile) : null
+      const issuedCommandPreview = sameTile(commandPreview, tile) ? commandPreview : null
+      const visibleCommandPreview = hoverCommandPreview ?? issuedCommandPreview
       const classes = ['tile']
       if (ore) classes.push('ore')
       if (building) classes.push(building.team, building.kind)
+      if (placementFeedback) classes.push('placement-preview', placementFeedback.valid ? 'valid' : 'invalid')
+      if (hoverCommandPreview) classes.push('command-preview', `command-${hoverCommandPreview.kind}`, 'command-hover')
+      if (issuedCommandPreview) classes.push('command-preview', `command-${issuedCommandPreview.kind}`, 'command-issued')
       const pieces = []
       if (ore) pieces.push('<span class="ore-label">ore</span>')
       if (building) {
@@ -166,7 +256,14 @@ function renderMap(current: GameState): void {
         const selected = current.selectedIds.includes(unit.id) ? ' selected' : ''
         pieces.push(`<span class="unit ${unit.team}${selected}${stateClass}">●${renderHealthBar(unit.hp, unit.maxHp)}</span>`)
       }
-      cells.push(`<button class="${classes.join(' ')}" data-x="${x}" data-y="${y}" aria-label="tile ${x},${y}">${pieces.join('')}</button>`)
+      if (placementFeedback) pieces.push(`<span class="placement-ghost">${placementFeedback.label}</span>`)
+      if (visibleCommandPreview) pieces.push(`<span class="command-marker ${visibleCommandPreview.kind}" aria-hidden="true"></span>`)
+      const ariaLabel = [
+        `tile ${x},${y}`,
+        placementFeedback ? placementFeedback.message : '',
+        visibleCommandPreview ? `${visibleCommandPreview.kind} command target` : '',
+      ].filter(Boolean).join(', ')
+      cells.push(`<button class="${classes.join(' ')}" data-x="${x}" data-y="${y}" aria-label="${ariaLabel}">${pieces.join('')}</button>`)
     }
   }
   map.innerHTML = cells.join('')
