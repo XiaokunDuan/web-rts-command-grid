@@ -2,3 +2,5 @@ node_modules/
 dist/
 .wanman/
 .DS_Store
+.wanman-run.log
+.wanman-start.sh
