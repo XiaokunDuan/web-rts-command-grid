@@ -40,6 +40,7 @@ app.innerHTML = `
       <h1>Command Grid</h1>
       <p class="status" id="status">Establish the outpost and destroy the rival HQ.</p>
       <dl id="stats"></dl>
+      <p class="delivery" id="delivery">Harvesters are scouting ore routes.</p>
       <div class="actions">
         <button type="button" data-build="refinery">Build Refinery (220)</button>
         <button type="button" data-build="barracks">Build Barracks (260)</button>
@@ -56,6 +57,7 @@ app.innerHTML = `
 const map = document.querySelector<HTMLDivElement>('#map')!
 const stats = document.querySelector<HTMLElement>('#stats')!
 const status = document.querySelector<HTMLElement>('#status')!
+const delivery = document.querySelector<HTMLElement>('#delivery')!
 const actionButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.actions button'))
 
 document.querySelectorAll<HTMLButtonElement>('[data-build]').forEach(button => {
@@ -210,6 +212,7 @@ function renderStats(current: GameState): void {
   const selected = current.units.filter(unit => current.selectedIds.includes(unit.id))
   const playerUnits = current.units.filter(unit => unit.team === 'player').length
   const enemyUnits = current.units.filter(unit => unit.team === 'enemy').length
+  const activeHarvesters = current.harvesters.filter(worker => worker.team === 'player').length
   const creditDelta = current.credits - previousCredits
   const creditDeltaText = creditDelta === 0 ? '' : `<span class="stat-delta ${creditDelta > 0 ? 'positive' : 'negative'}">${creditDelta > 0 ? '+' : ''}${creditDelta}</span>`
   previousCredits = current.credits
@@ -217,8 +220,14 @@ function renderStats(current: GameState): void {
     <div><dt>Credits</dt><dd>${current.credits}${creditDeltaText}</dd></div>
     <div><dt>Selected</dt><dd>${selected.length}</dd></div>
     <div><dt>Units</dt><dd>${playerUnits} / ${enemyUnits}</dd></div>
+    <div><dt>Harvesters</dt><dd>${activeHarvesters}</dd></div>
     <div><dt>Mode</dt><dd>${buildMode ?? 'command'}</dd></div>
   `
+  if (current.lastDelivery?.team === 'player') {
+    delivery.textContent = `Delivered +${current.lastDelivery.amount} credits at ${current.lastDelivery.x},${current.lastDelivery.y}.`
+  } else {
+    delivery.textContent = 'Harvesters are scouting ore routes.'
+  }
   for (const button of actionButtons) {
     if (button.id === 'train') {
       const hasBarracks = current.buildings.some(building => building.team === 'player' && building.kind === 'barracks')
@@ -239,6 +248,7 @@ function renderMap(current: GameState): void {
       const ore = current.ore.find(node => node.x === x && node.y === y && node.amount > 0)
       const building = current.buildings.find(item => item.x === x && item.y === y)
       const units = current.units.filter(item => item.x === x && item.y === y)
+      const harvesters = current.harvesters.filter(item => item.x === x && item.y === y)
       const tile = { x, y }
       const placementFeedback = buildMode && sameTile(hoverTile, tile) ? getPlacementFeedback(current, buildMode, tile) : null
       const hoverCommandPreview = !buildMode && current.selectedIds.length > 0 && sameTile(hoverTile, tile) ? commandPreviewForTile(current, tile) : null
@@ -251,9 +261,12 @@ function renderMap(current: GameState): void {
       if (hoverCommandPreview) classes.push('command-preview', `command-${hoverCommandPreview.kind}`, 'command-hover')
       if (issuedCommandPreview) classes.push('command-preview', `command-${issuedCommandPreview.kind}`, 'command-issued')
       const pieces = []
-      if (ore) pieces.push('<span class="ore-label">ore</span>')
+      if (ore) pieces.push(`<span class="ore-label">ore <small>${ore.amount}</small></span>`)
       if (building) {
         pieces.push(`<span class="building-label">${building.kind.toUpperCase()}${renderHealthBar(building.hp, building.maxHp)}</span>`)
+      }
+      for (const worker of harvesters) {
+        pieces.push(`<span class="harvester ${worker.team} ${worker.status}" title="${worker.status}">${worker.cargo > 0 ? worker.cargo : 'H'}</span>`)
       }
       for (const unit of units) {
         const stateClass = unit.attackTargetId ? ' attacking' : unit.target ? ' moving' : ''
@@ -264,6 +277,8 @@ function renderMap(current: GameState): void {
       if (visibleCommandPreview) pieces.push(`<span class="command-marker ${visibleCommandPreview.kind}" aria-hidden="true"></span>`)
       const ariaLabel = [
         `tile ${x},${y}`,
+        ore ? `${ore.amount} ore remaining` : '',
+        harvesters.length > 0 ? `${harvesters.length} harvester${harvesters.length === 1 ? '' : 's'}` : '',
         placementFeedback ? placementFeedback.message : '',
         visibleCommandPreview ? `${visibleCommandPreview.kind} command target` : '',
       ].filter(Boolean).join(', ')

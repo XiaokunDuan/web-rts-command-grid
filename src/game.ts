@@ -15,6 +15,19 @@ export interface Unit {
   attackTargetId?: number
 }
 
+export type HarvestStatus = 'seeking' | 'loading' | 'returning' | 'unloading' | 'idle'
+
+export interface HarvestWorker {
+  id: number
+  team: Team
+  x: number
+  y: number
+  cargo: number
+  capacity: number
+  status: HarvestStatus
+  targetOre?: MapPoint
+}
+
 export interface Building {
   id: number
   team: Team
@@ -32,13 +45,16 @@ export interface GameState {
   nextId: number
   selectedIds: number[]
   units: Unit[]
+  harvesters: HarvestWorker[]
   buildings: Building[]
   ore: Array<{ x: number; y: number; amount: number }>
+  lastDelivery?: { team: Team; amount: number; x: number; y: number; tick: number }
   winner?: Team
 }
 
 export const MAP_WIDTH = 16
 export const MAP_HEIGHT = 10
+const HARVESTER_CAPACITY = 30
 
 export function createInitialState(): GameState {
   return {
@@ -56,6 +72,10 @@ export function createInitialState(): GameState {
       { id: 4, team: 'player', x: 4, y: 4, hp: 120, maxHp: 120, attack: 18, range: 1 },
       { id: 5, team: 'enemy', x: 12, y: 6, hp: 110, maxHp: 110, attack: 16, range: 1 },
       { id: 6, team: 'enemy', x: 11, y: 7, hp: 110, maxHp: 110, attack: 16, range: 1 },
+    ],
+    harvesters: [
+      createHarvester(7, 'player', { x: 2, y: 2 }),
+      createHarvester(8, 'enemy', { x: 13, y: 7 }),
     ],
     ore: [
       { x: 6, y: 2, amount: 900 },
@@ -85,11 +105,16 @@ export function buildStructure(state: GameState, kind: 'refinery' | 'barracks', 
   const cost = kind === 'refinery' ? 220 : 260
   if (!canAfford(state, cost) || isOccupied(state, x, y)) return state
   const hp = kind === 'refinery' ? 520 : 620
+  const building: Building = { id: state.nextId, team: 'player', kind, x, y, hp, maxHp: hp }
+  const refineryWorker = kind === 'refinery'
+    ? createHarvester(state.nextId + 1, 'player', { x, y })
+    : undefined
   return {
     ...state,
     credits: state.credits - cost,
-    nextId: state.nextId + 1,
-    buildings: [...state.buildings, { id: state.nextId, team: 'player', kind, x, y, hp, maxHp: hp }],
+    nextId: state.nextId + (refineryWorker ? 2 : 1),
+    buildings: [...state.buildings, building],
+    harvesters: refineryWorker ? [...state.harvesters, refineryWorker] : state.harvesters,
   }
 }
 
@@ -150,11 +175,21 @@ export function stepGame(state: GameState): GameState {
 }
 
 function harvest(state: GameState): GameState {
-  const playerRefineries = state.buildings.filter(b => b.team === 'player' && b.kind === 'refinery').length
-  const enemyRefineries = state.buildings.filter(b => b.team === 'enemy' && b.kind === 'refinery').length
-  const nearbyPlayerOre = state.ore.some(o => o.amount > 0 && state.buildings.some(b => b.team === 'player' && distance(o, b) <= 4))
-  const income = playerRefineries > 0 && nearbyPlayerOre ? 8 * playerRefineries : 2
-  return { ...state, credits: Math.min(2000, state.credits + income), enemyCredits: Math.min(2000, state.enemyCredits + 4 + 5 * enemyRefineries) }
+  let credits = state.credits
+  let enemyCredits = state.enemyCredits
+  let ore = state.ore.map(node => ({ ...node }))
+  let lastDelivery = state.lastDelivery
+
+  const harvesters = state.harvesters.map(worker => {
+    const result = stepHarvester({ ...state, credits, enemyCredits, ore, lastDelivery }, worker)
+    credits = result.credits
+    enemyCredits = result.enemyCredits
+    ore = result.ore
+    lastDelivery = result.lastDelivery
+    return result.worker
+  })
+
+  return { ...state, credits, enemyCredits, ore, harvesters, lastDelivery }
 }
 
 function enemyPlan(state: GameState): GameState {
@@ -164,8 +199,9 @@ function enemyPlan(state: GameState): GameState {
     next = {
       ...next,
       enemyCredits: next.enemyCredits - 180,
-      nextId: next.nextId + 1,
+      nextId: next.nextId + 2,
       buildings: [...next.buildings, { id: next.nextId, team: 'enemy', kind: 'refinery', x: 11, y: 6, hp: 480, maxHp: 480 }],
+      harvesters: [...next.harvesters, createHarvester(next.nextId + 1, 'enemy', { x: 11, y: 6 })],
     }
   } else if (next.enemyCredits >= 100) {
     const spawn = nearestOpenTile(next, { x: 12, y: 7 })
@@ -318,4 +354,115 @@ function nearestOpenTile(state: GameState, start: MapPoint): MapPoint {
 
 function isOccupied(state: GameState, x: number, y: number): boolean {
   return state.units.some(unit => unit.x === x && unit.y === y) || state.buildings.some(building => building.x === x && building.y === y)
+}
+
+function createHarvester(id: number, team: Team, point: MapPoint): HarvestWorker {
+  return {
+    id,
+    team,
+    ...point,
+    cargo: 0,
+    capacity: HARVESTER_CAPACITY,
+    status: 'seeking',
+  }
+}
+
+function stepHarvester(state: GameState, worker: HarvestWorker): {
+  worker: HarvestWorker
+  credits: number
+  enemyCredits: number
+  ore: GameState['ore']
+  lastDelivery?: GameState['lastDelivery']
+} {
+  const dropoff = nearestDropoff(state, worker)
+  if (!dropoff) {
+    return { worker: { ...worker, status: 'idle' }, credits: state.credits, enemyCredits: state.enemyCredits, ore: state.ore, lastDelivery: state.lastDelivery }
+  }
+
+  if (worker.status === 'returning' || worker.cargo > 0) {
+    if (worker.x === dropoff.x && worker.y === dropoff.y) {
+      const amount = worker.cargo
+      const nextCredits = worker.team === 'player' ? Math.min(2000, state.credits + amount) : state.credits
+      const nextEnemyCredits = worker.team === 'enemy' ? Math.min(2000, state.enemyCredits + amount) : state.enemyCredits
+      return {
+        worker: { ...worker, cargo: 0, status: 'unloading', targetOre: undefined },
+        credits: nextCredits,
+        enemyCredits: nextEnemyCredits,
+        ore: state.ore,
+        lastDelivery: amount > 0 ? { team: worker.team, amount, x: dropoff.x, y: dropoff.y, tick: state.tick } : state.lastDelivery,
+      }
+    }
+    return {
+      worker: { ...worker, ...stepToward(worker, dropoff), status: 'returning' },
+      credits: state.credits,
+      enemyCredits: state.enemyCredits,
+      ore: state.ore,
+      lastDelivery: state.lastDelivery,
+    }
+  }
+
+  if (worker.status === 'unloading') {
+    return { worker: { ...worker, status: 'seeking' }, credits: state.credits, enemyCredits: state.enemyCredits, ore: state.ore, lastDelivery: state.lastDelivery }
+  }
+
+  const targetOre = findTargetOre(state, worker)
+  if (!targetOre) {
+    return { worker: { ...worker, status: 'idle', targetOre: undefined }, credits: state.credits, enemyCredits: state.enemyCredits, ore: state.ore, lastDelivery: state.lastDelivery }
+  }
+
+  if (worker.x !== targetOre.x || worker.y !== targetOre.y) {
+    return {
+      worker: { ...worker, ...stepToward(worker, targetOre), status: 'seeking', targetOre: { x: targetOre.x, y: targetOre.y } },
+      credits: state.credits,
+      enemyCredits: state.enemyCredits,
+      ore: state.ore,
+      lastDelivery: state.lastDelivery,
+    }
+  }
+
+  if (worker.status !== 'loading') {
+    return {
+      worker: { ...worker, status: 'loading', targetOre: { x: targetOre.x, y: targetOre.y } },
+      credits: state.credits,
+      enemyCredits: state.enemyCredits,
+      ore: state.ore,
+      lastDelivery: state.lastDelivery,
+    }
+  }
+
+  const amount = Math.min(worker.capacity, targetOre.amount)
+  const ore = state.ore.map(node => node.x === targetOre.x && node.y === targetOre.y
+    ? { ...node, amount: node.amount - amount }
+    : node)
+
+  return {
+    worker: {
+      ...worker,
+      cargo: amount,
+      status: amount > 0 ? 'returning' : 'idle',
+      targetOre: amount > 0 ? { x: targetOre.x, y: targetOre.y } : undefined,
+    },
+    credits: state.credits,
+    enemyCredits: state.enemyCredits,
+    ore,
+    lastDelivery: state.lastDelivery,
+  }
+}
+
+function nearestDropoff(state: GameState, worker: HarvestWorker): Building | undefined {
+  return state.buildings
+    .filter(building => building.team === worker.team && (building.kind === 'hq' || building.kind === 'refinery'))
+    .sort((a, b) => distance(worker, a) - distance(worker, b))[0]
+}
+
+function findTargetOre(state: GameState, worker: HarvestWorker): { x: number; y: number; amount: number } | undefined {
+  const assigned = state.ore.find(node => node.amount > 0 && worker.targetOre?.x === node.x && worker.targetOre.y === node.y)
+  if (assigned) return assigned
+  return state.ore
+    .filter(node => node.amount > 0)
+    .sort((a, b) => distance(worker, a) - distance(worker, b) || b.amount - a.amount)[0]
+}
+
+function stepToward(origin: MapPoint, destination: MapPoint): MapPoint {
+  return orderedNeighbors(origin, destination)[0] ?? origin
 }

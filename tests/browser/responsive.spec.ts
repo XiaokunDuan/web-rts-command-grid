@@ -17,19 +17,15 @@ test.describe('responsive command grid', () => {
     expect(overflow.body).toBeLessThanOrEqual(overflow.viewport)
     expect(overflow.document).toBeLessThanOrEqual(overflow.viewport)
 
-    const lastTileBox = await page.locator('[data-x="15"][data-y="9"]').evaluate(tile => {
+    await expect.poll(async () => page.locator('[data-x="15"][data-y="9"]').evaluate((tile, viewport) => {
       const rect = tile.getBoundingClientRect()
-      return { width: rect.width, height: rect.height, right: rect.right, bottom: rect.bottom }
-    })
-    expect(lastTileBox.width).toBeGreaterThan(0)
-    expect(lastTileBox.height).toBeGreaterThan(0)
-    expect(lastTileBox.right).toBeLessThanOrEqual(overflow.viewport)
+      return rect.width > 0 && rect.height > 0 && rect.right <= viewport
+    }, overflow.viewport)).toBe(true)
 
-    const tileSizes = await page.locator('.tile').evaluateAll(tiles => tiles.map(tile => {
+    await expect.poll(async () => page.locator('.tile').evaluateAll(tiles => tiles.map(tile => {
       const rect = tile.getBoundingClientRect()
       return { width: rect.width, height: rect.height }
-    }))
-    expect(tileSizes.every(size => size.width > 0 && size.height > 0)).toBe(true)
+    }).every(size => size.width > 0 && size.height > 0))).toBe(true)
   })
 
   test('uses the expected layout at the 860px breakpoint', async ({ page }, testInfo) => {
@@ -70,5 +66,22 @@ test.describe('responsive command grid', () => {
     await expect(page.locator('[data-x="5"][data-y="2"] .placement-ghost')).toContainText('REFINERY')
     await page.locator('[data-x="5"][data-y="2"]').click()
     await expect(page.locator('#status')).toContainText('refinery placed at 5,2.')
+  })
+
+  test('shows harvester delivery feedback in the browser', async ({ page }) => {
+    await page.goto('/')
+
+    await expect(page.locator('.harvester.player')).toBeVisible()
+    await expect(page.locator('[data-x="6"][data-y="2"]')).toContainText('900')
+
+    await page.locator('[data-build="refinery"]').click()
+    await page.locator('[data-x="5"][data-y="2"]').click()
+
+    await expect(page.locator('[data-x="5"][data-y="2"] .harvester.player')).toBeVisible()
+    await expect(page.locator('#stats')).toContainText('Credits280')
+
+    await expect(page.locator('#delivery')).toContainText('Delivered +30 credits', { timeout: 6000 })
+    await expect(page.locator('#stats')).toContainText('Credits310')
+    await expect(page.locator('[data-x="6"][data-y="2"]')).toContainText('870')
   })
 })

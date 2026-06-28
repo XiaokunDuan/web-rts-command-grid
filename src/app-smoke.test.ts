@@ -58,6 +58,7 @@ describe('browser RTS smoke', () => {
     expect(document.querySelector('#train')).not.toBeNull()
     expect(document.querySelector('.unit.player')).not.toBeNull()
     expect(document.querySelector('.unit.enemy')).not.toBeNull()
+    expect(document.querySelector('.harvester.player')).not.toBeNull()
     expect(document.querySelector('.unit.player .hp-bar')).not.toBeNull()
     expect(tileAt(2, 2).querySelector('.building-label .hp-bar')).not.toBeNull()
   })
@@ -124,20 +125,23 @@ describe('browser RTS smoke', () => {
     const placedTile = tileAt(5, 2)
     expect(placedTile.classList.contains('refinery')).toBe(true)
     expect(placedTile.textContent).toContain('REFINERY')
+    expect(placedTile.querySelector('.harvester.player')).not.toBeNull()
     expect(document.querySelector('#status')?.textContent).toContain('refinery placed at 5,2.')
     expect(document.querySelector('#stats')?.textContent).toContain('Credits280')
     expect(document.querySelector('.stat-delta.negative')?.textContent).toBe('-220')
   })
 
-  it('shows positive credit deltas from resource income', async () => {
+  it('shows positive credit deltas from harvester deliveries', async () => {
     await loadApp()
     document.querySelector<HTMLButtonElement>('[data-build="refinery"]')!.click()
     pressTile(tileAt(5, 2))
 
-    await vi.advanceTimersByTimeAsync(550)
+    await vi.advanceTimersByTimeAsync(2750)
 
-    expect(document.querySelector('#stats')?.textContent).toContain('Credits288')
-    expect(document.querySelector('.stat-delta.positive')?.textContent).toBe('+8')
+    expect(document.querySelector('#stats')?.textContent).toContain('Credits310')
+    expect(document.querySelector('.stat-delta.positive')?.textContent).toBe('+30')
+    expect(document.querySelector('#delivery')?.textContent).toContain('Delivered +30 credits')
+    expect(tileAt(6, 2).getAttribute('aria-label')).toContain('ore remaining')
   })
 
   it('keeps build mode active and marks occupied placement as invalid', async () => {

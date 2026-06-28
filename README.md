@@ -17,11 +17,11 @@ renders a 16x10 command grid with player and enemy HQs, ore nodes, starter
 Ranger units, credits, unit counts, selected-unit state, build mode, and win/loss
 status.
 
-The implemented loop includes abstract resource income, refinery and barracks
-placement, Ranger production, single selection, box selection, right-click
-movement, right-click attack orders, HP damage, destroyed-unit cleanup, HQ-based
-victory checks, and a simple enemy planner that builds, produces, targets, and
-advances toward the player.
+The implemented loop includes visible autonomous harvesters, ore depletion,
+delivery feedback, refinery and barracks placement, Ranger production, single
+selection, box selection, right-click movement, right-click attack orders, HP
+damage, destroyed-unit cleanup, HQ-based victory checks, and a simple enemy
+planner that builds, produces, targets, and advances toward the player.
 
 ## Prototype Scope
 
@@ -60,6 +60,7 @@ pnpm install
 pnpm dev
 pnpm build
 pnpm test
+pnpm test:browser
 ```
 
 Available package scripts:
@@ -69,11 +70,13 @@ Available package scripts:
 - `pnpm test`: run the Vitest suite once, including pure game-state tests and
   jsdom browser smoke tests for rendering, selection, movement feedback,
   drag-selection, and building placement.
+- `pnpm test:browser`: run Playwright checks for responsive layout and
+  browser-visible command/economy interactions.
 - `pnpm preview`: serve the production build locally.
 
 ## Known Prototype Limits
 
-- Resource harvesting is abstract income, not worker pathing.
+- Harvesters are autonomous economy units, not directly selectable combat units.
 - Movement is tile-stepped with simple collision avoidance, not full pathfinding.
 - Enemy planning is intentionally simple and deterministic for testability.
 - The prototype may remain silent. Any future audio must be original or

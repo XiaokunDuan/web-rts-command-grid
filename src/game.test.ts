@@ -32,8 +32,51 @@ describe('RTS game state', () => {
     let state = createInitialState()
     state = buildStructure(state, 'refinery', 5, 2)
     const credits = state.credits
-    for (let i = 0; i < 5; i++) state = stepGame(state)
+    for (let i = 0; i < 12; i++) state = stepGame(state)
     expect(state.credits).toBeGreaterThan(credits)
+  })
+
+  it('adds a harvester when placing a refinery', () => {
+    let state = createInitialState()
+    const startingHarvesters = state.harvesters.length
+
+    state = buildStructure(state, 'refinery', 5, 2)
+
+    expect(state.harvesters).toHaveLength(startingHarvesters + 1)
+    expect(state.harvesters.at(-1)).toMatchObject({ team: 'player', x: 5, y: 2, cargo: 0, status: 'seeking' })
+    expect(state.nextId).toBe(12)
+  })
+
+  it('moves harvesters through loading, ore depletion, and delivery', () => {
+    let state = createInitialState()
+    state = {
+      ...state,
+      harvesters: state.harvesters.filter(worker => worker.team === 'player'),
+    }
+    const startingCredits = state.credits
+    const startingOre = state.ore.find(node => node.x === 6 && node.y === 2)!.amount
+
+    for (let i = 0; i < 12; i++) state = stepGame(state)
+
+    const playerHarvester = state.harvesters.find(worker => worker.team === 'player')!
+    const ore = state.ore.find(node => node.x === 6 && node.y === 2)!
+
+    expect(playerHarvester.cargo).toBe(0)
+    expect(state.credits).toBeGreaterThan(startingCredits)
+    expect(ore.amount).toBe(startingOre - playerHarvester.capacity)
+    expect(state.lastDelivery).toMatchObject({ team: 'player', amount: playerHarvester.capacity, x: 2, y: 2 })
+  })
+
+  it('keeps harvesters idle when ore is depleted', () => {
+    let state = createInitialState()
+    state = {
+      ...state,
+      ore: state.ore.map(node => ({ ...node, amount: 0 })),
+    }
+
+    state = stepGame(state)
+
+    expect(state.harvesters.every(worker => worker.status === 'idle')).toBe(true)
   })
 
   it('chases a distant attack target before dealing damage', () => {
