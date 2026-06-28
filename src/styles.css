@@ -94,6 +94,8 @@ small {
 
 .unit.enemy { background: #df8b81; }
 .unit.selected { outline: 3px solid #fff56a; }
+.unit.moving { box-shadow: 0 0 0 4px rgba(255,255,255,.45); }
+.unit.attacking { box-shadow: 0 0 0 4px rgba(185,36,24,.55); }
 .unit small { position: absolute; bottom: -14px; color: #111; }
 
 .panel {

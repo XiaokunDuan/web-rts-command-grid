@@ -160,8 +160,9 @@ function renderMap(current: GameState): void {
       if (ore) pieces.push('<span class="ore-label">ore</span>')
       if (building) pieces.push(`<span class="building-label">${building.kind.toUpperCase()}<small>${building.hp}</small></span>`)
       for (const unit of units) {
+        const stateClass = unit.attackTargetId ? ' attacking' : unit.target ? ' moving' : ''
         const selected = current.selectedIds.includes(unit.id) ? ' selected' : ''
-        pieces.push(`<span class="unit ${unit.team}${selected}">●<small>${unit.hp}</small></span>`)
+        pieces.push(`<span class="unit ${unit.team}${selected}${stateClass}">●<small>${unit.hp}</small></span>`)
       }
       cells.push(`<button class="${classes.join(' ')}" data-x="${x}" data-y="${y}" aria-label="tile ${x},${y}">${pieces.join('')}</button>`)
     }

@@ -15,6 +15,10 @@ function pressTile(tile: HTMLElement): void {
   tile.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }))
 }
 
+function rightClickTile(tile: HTMLElement): void {
+  tile.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }))
+}
+
 describe('browser RTS smoke', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -39,8 +43,19 @@ describe('browser RTS smoke', () => {
     expect(document.querySelector('.unit.selected')).not.toBeNull()
     expect(document.querySelector('#status')?.textContent).toContain('Selected unit')
 
-    tileAt(8, 4).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }))
+    rightClickTile(tileAt(8, 4))
     expect(document.querySelector('#status')?.textContent).toContain('Move order')
+    expect(document.querySelector('.unit.player.moving')).not.toBeNull()
+  })
+
+  it('shows attack order feedback when right-clicking an enemy', async () => {
+    await loadApp()
+    pressTile(tileAt(3, 4))
+
+    rightClickTile(tileAt(12, 6))
+
+    expect(document.querySelector('#status')?.textContent).toContain('Attack order on target 5.')
+    expect(document.querySelector('.unit.player.attacking')).not.toBeNull()
   })
 
   it('drag-selects the starter squad from the map', async () => {
@@ -66,5 +81,31 @@ describe('browser RTS smoke', () => {
     expect(placedTile.textContent).toContain('REFINERY')
     expect(document.querySelector('#status')?.textContent).toContain('refinery placed at 5,2.')
     expect(document.querySelector('#stats')?.textContent).toContain('Credits280')
+  })
+
+  it('places a barracks and enables Ranger training deployment', async () => {
+    await loadApp()
+    const trainButton = document.querySelector<HTMLButtonElement>('#train')!
+    expect(trainButton.disabled).toBe(true)
+
+    document.querySelector<HTMLButtonElement>('[data-build="barracks"]')!.click()
+
+    expect(document.querySelector('#status')?.textContent).toContain('Placing barracks')
+
+    pressTile(tileAt(5, 4))
+
+    const barracksTile = tileAt(5, 4)
+    expect(barracksTile.classList.contains('barracks')).toBe(true)
+    expect(barracksTile.textContent).toContain('BARRACKS')
+    expect(document.querySelector('#status')?.textContent).toContain('barracks placed at 5,4.')
+    expect(document.querySelector('#stats')?.textContent).toContain('Credits240')
+    expect(trainButton.disabled).toBe(false)
+
+    trainButton.click()
+
+    expect(document.querySelector('#status')?.textContent).toContain('Ranger deployed from the barracks.')
+    expect(document.querySelectorAll('.unit.player')).toHaveLength(3)
+    expect(tileAt(4, 3).querySelector('.unit.player')).not.toBeNull()
+    expect(document.querySelector('#stats')?.textContent).toContain('Credits120')
   })
 })
