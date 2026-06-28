@@ -67,16 +67,14 @@ Available package scripts:
 
 - `pnpm dev`: start the Vite dev server on `127.0.0.1`.
 - `pnpm build`: run TypeScript checking and create a production build.
-- `pnpm test`: run the Vitest suite once.
+- `pnpm test`: run the Vitest suite once, including pure game-state tests and a jsdom browser smoke test for grid rendering, selection, and command feedback.
 - `pnpm preview`: serve the production build locally.
 
 ## Roadmap
 
 1. Replace the static scaffold with a playable RTS core loop in `src`.
-2. Add deterministic game-state tests for economy, production, movement, combat,
-   health, and enemy AI decisions.
-3. Tune UI feedback for selection rings, placement validity, command targets,
-   health bars, and resource deltas.
+2. Expand browser interaction coverage beyond the current smoke test into drag-selection, building placement, training, and combat order flows.
+3. Tune UI feedback for selection rings, placement validity, command targets, health bars, and resource deltas.
 4. Improve responsive layout for desktop and mobile browser testing.
 5. Add original audio only if it can be created or sourced without protected
    material; otherwise keep the prototype silent.

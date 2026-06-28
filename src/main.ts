@@ -44,16 +44,19 @@ app.innerHTML = `
 const map = document.querySelector<HTMLDivElement>('#map')!
 const stats = document.querySelector<HTMLElement>('#stats')!
 const status = document.querySelector<HTMLElement>('#status')!
+const actionButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.actions button'))
 
 document.querySelectorAll<HTMLButtonElement>('[data-build]').forEach(button => {
   button.addEventListener('click', () => {
     buildMode = button.dataset.build as 'refinery' | 'barracks'
-    status.textContent = `Placing ${buildMode}. Click a clear map tile.`
+    status.textContent = `Placing ${buildMode}. Click a clear map tile, or press Escape to cancel.`
   })
 })
 
 document.querySelector<HTMLButtonElement>('#train')!.addEventListener('click', () => {
+  const before = state.units.length
   state = trainUnit(state)
+  status.textContent = state.units.length > before ? 'Ranger deployed from the barracks.' : 'Build a barracks and save 120 credits before training.'
   render()
 })
 
@@ -81,7 +84,9 @@ map.addEventListener('mouseup', event => {
   const tile = tileFromEvent(event)
   if (!tile || event.button !== 0) return
   if (buildMode) {
+    const before = state.buildings.length
     state = buildStructure(state, buildMode, tile.x, tile.y)
+    status.textContent = state.buildings.length > before ? `${buildMode} placed at ${tile.x},${tile.y}.` : `Cannot place ${buildMode} there. Check credits and clear tiles.`
     buildMode = null
     render()
     return
@@ -89,8 +94,10 @@ map.addEventListener('mouseup', event => {
   const unit = state.units.find(candidate => candidate.team === 'player' && candidate.x === tile.x && candidate.y === tile.y)
   if (unit && dragStart && dragStart.x === tile.x && dragStart.y === tile.y) {
     state = { ...state, selectedIds: [unit.id] }
+    status.textContent = `Selected unit ${unit.id}.`
   } else if (dragStart) {
     state = selectInBox(state, dragStart, tile)
+    status.textContent = state.selectedIds.length > 0 ? `Selected ${state.selectedIds.length} units.` : 'No units selected.'
   }
   dragStart = null
   render()
@@ -102,6 +109,7 @@ map.addEventListener('contextmenu', event => {
   if (!tile || state.selectedIds.length === 0) return
   const enemy = [...state.units, ...state.buildings].find(candidate => candidate.team === 'enemy' && candidate.x === tile.x && candidate.y === tile.y)
   state = enemy ? issueAttack(state, enemy.id) : issueMove(state, tile.x, tile.y)
+  status.textContent = enemy ? `Attack order on target ${enemy.id}.` : `Move order to ${tile.x},${tile.y}.`
   render()
 })
 
@@ -125,6 +133,16 @@ function renderStats(current: GameState): void {
     <div><dt>Units</dt><dd>${playerUnits} / ${enemyUnits}</dd></div>
     <div><dt>Mode</dt><dd>${buildMode ?? 'command'}</dd></div>
   `
+  for (const button of actionButtons) {
+    if (button.id === 'train') {
+      const hasBarracks = current.buildings.some(building => building.team === 'player' && building.kind === 'barracks')
+      button.disabled = !hasBarracks || current.credits < 120
+    } else {
+      const kind = button.dataset.build
+      const cost = kind === 'refinery' ? 220 : 260
+      button.disabled = Boolean(buildMode) || current.credits < cost
+    }
+  }
   if (current.winner) status.textContent = current.winner === 'player' ? 'Victory: rival HQ destroyed.' : 'Defeat: your HQ fell.'
 }
 

@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
     "typescript": "latest",
+    "vite": "latest",
     "vitest": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
 }
