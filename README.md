@@ -81,8 +81,7 @@ Available package scripts:
 
 1. Add broader obstacle-aware pathfinding beyond one-step collision avoidance.
 2. Expand browser interaction coverage into combat resolution and win/loss flows.
-3. Tune UI feedback for selection rings, placement validity, command targets,
-   health bars, and resource deltas.
+3. Tune UI feedback for placement validity, command target previews, and resource deltas.
 4. Improve responsive layout for desktop and mobile browser testing.
 5. Add original audio only if it can be created or sourced without protected
    material; otherwise keep the prototype silent.

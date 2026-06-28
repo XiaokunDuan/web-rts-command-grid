@@ -35,6 +35,8 @@ describe('browser RTS smoke', () => {
     expect(document.querySelector('#train')).not.toBeNull()
     expect(document.querySelector('.unit.player')).not.toBeNull()
     expect(document.querySelector('.unit.enemy')).not.toBeNull()
+    expect(document.querySelector('.unit.player .hp-bar')).not.toBeNull()
+    expect(tileAt(2, 2).querySelector('.building-label .hp-bar')).not.toBeNull()
   })
 
   it('selects a unit and shows command feedback', async () => {
@@ -117,7 +119,11 @@ describe('browser RTS smoke', () => {
     rightClickTile(tileAt(12, 6))
     expect(document.querySelector('#status')?.textContent).toContain('Attack order on target 5.')
 
-    await vi.advanceTimersByTimeAsync(9000)
+    await vi.advanceTimersByTimeAsync(5500)
+
+    expect(document.querySelector<HTMLElement>('.unit.enemy .hp-bar > span')?.style.width).not.toBe('100%')
+
+    await vi.advanceTimersByTimeAsync(3500)
 
     expect(tileAt(12, 6).querySelector('.unit.enemy')).toBeNull()
     expect(document.querySelectorAll('.unit.enemy')).toHaveLength(1)

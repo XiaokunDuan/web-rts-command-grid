@@ -158,16 +158,23 @@ function renderMap(current: GameState): void {
       if (building) classes.push(building.team, building.kind)
       const pieces = []
       if (ore) pieces.push('<span class="ore-label">ore</span>')
-      if (building) pieces.push(`<span class="building-label">${building.kind.toUpperCase()}<small>${building.hp}</small></span>`)
+      if (building) {
+        pieces.push(`<span class="building-label">${building.kind.toUpperCase()}${renderHealthBar(building.hp, building.maxHp)}</span>`)
+      }
       for (const unit of units) {
         const stateClass = unit.attackTargetId ? ' attacking' : unit.target ? ' moving' : ''
         const selected = current.selectedIds.includes(unit.id) ? ' selected' : ''
-        pieces.push(`<span class="unit ${unit.team}${selected}${stateClass}">●<small>${unit.hp}</small></span>`)
+        pieces.push(`<span class="unit ${unit.team}${selected}${stateClass}">●${renderHealthBar(unit.hp, unit.maxHp)}</span>`)
       }
       cells.push(`<button class="${classes.join(' ')}" data-x="${x}" data-y="${y}" aria-label="tile ${x},${y}">${pieces.join('')}</button>`)
     }
   }
   map.innerHTML = cells.join('')
+}
+
+function renderHealthBar(hp: number, maxHp: number): string {
+  const percent = Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100)))
+  return `<span class="hp-bar" aria-label="${hp} of ${maxHp} hit points"><span style="width: ${percent}%"></span></span>`
 }
 
 render()

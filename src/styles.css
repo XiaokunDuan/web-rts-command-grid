@@ -74,11 +74,30 @@ body { margin: 0; }
   font-size: clamp(9px, 1.1vw, 13px);
 }
 
-small {
-  display: block;
-  font-size: 9px;
-  font-weight: 700;
+.hp-bar {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  height: 5px;
+  border: 1px solid rgba(0,0,0,.55);
+  background: rgba(24,32,27,.25);
 }
+
+.hp-bar > span {
+  display: block;
+  height: 100%;
+  background: #2f9a50;
+}
+
+.unit .hp-bar {
+  left: -5px;
+  right: -5px;
+  bottom: -8px;
+  height: 4px;
+}
+
+.unit.enemy .hp-bar > span { background: #b92418; }
 
 .unit {
   width: 24px;
@@ -96,7 +115,6 @@ small {
 .unit.selected { outline: 3px solid #fff56a; }
 .unit.moving { box-shadow: 0 0 0 4px rgba(255,255,255,.45); }
 .unit.attacking { box-shadow: 0 0 0 4px rgba(185,36,24,.55); }
-.unit small { position: absolute; bottom: -14px; color: #111; }
 
 .panel {
   padding: 18px;
