@@ -187,32 +187,49 @@ function enemyPlan(state: GameState): GameState {
 }
 
 function moveUnits(state: GameState): GameState {
-  return {
-    ...state,
-    units: state.units.map(unit => {
-      const attackTarget = unit.attackTargetId ? findTargetById(state, unit.attackTargetId) : undefined
-      if (unit.attackTargetId && !attackTarget) return { ...unit, attackTargetId: undefined, target: undefined }
-      if (attackTarget) {
-        if (distance(unit, attackTarget) <= unit.range) return { ...unit, target: undefined }
-        return { ...unit, ...stepToward(unit, attackTarget), target: undefined }
-      }
-      if (!unit.target) return unit
-      if (unit.x === unit.target.x && unit.y === unit.target.y) return { ...unit, target: undefined }
-      return { ...unit, ...stepToward(unit, unit.target) }
-    }),
+  const movedUnits: Unit[] = []
+  for (const unit of state.units) {
+    const movingUnit = moveUnit(state, unit, [...state.units.filter(other => other.id !== unit.id), ...movedUnits])
+    movedUnits.push(movingUnit)
   }
+  return { ...state, units: movedUnits }
+}
+
+function moveUnit(state: GameState, unit: Unit, blockingUnits: Unit[]): Unit {
+  const attackTarget = unit.attackTargetId ? findTargetById(state, unit.attackTargetId) : undefined
+  if (unit.attackTargetId && !attackTarget) return { ...unit, attackTargetId: undefined, target: undefined }
+  if (attackTarget) {
+    if (distance(unit, attackTarget) <= unit.range) return { ...unit, target: undefined }
+    const nextPoint = nextOpenStep(state, unit, attackTarget, blockingUnits)
+    return nextPoint ? { ...unit, ...nextPoint, target: undefined } : { ...unit, target: undefined }
+  }
+  if (!unit.target) return unit
+  if (unit.x === unit.target.x && unit.y === unit.target.y) return { ...unit, target: undefined }
+  const nextPoint = nextOpenStep(state, unit, unit.target, blockingUnits)
+  return nextPoint ? { ...unit, ...nextPoint } : unit
 }
 
 function findTargetById(state: GameState, targetId: number): Unit | Building | undefined {
   return state.units.find(target => target.id === targetId) ?? state.buildings.find(target => target.id === targetId)
 }
 
-function stepToward(origin: MapPoint, destination: MapPoint): MapPoint {
+function nextOpenStep(state: GameState, origin: MapPoint, destination: MapPoint, blockingUnits: Unit[]): MapPoint | undefined {
+  return candidateSteps(origin, destination).find(point => !isBlocked(state, blockingUnits, origin, point))
+}
+
+function candidateSteps(origin: MapPoint, destination: MapPoint): MapPoint[] {
   const deltaX = destination.x - origin.x
   const deltaY = destination.y - origin.y
-  if (Math.abs(deltaX) >= Math.abs(deltaY) && deltaX !== 0) return clampToMap({ x: origin.x + Math.sign(deltaX), y: origin.y })
-  if (deltaY !== 0) return clampToMap({ x: origin.x, y: origin.y + Math.sign(deltaY) })
-  return clampToMap(origin)
+  const horizontal = deltaX === 0 ? undefined : clampToMap({ x: origin.x + Math.sign(deltaX), y: origin.y })
+  const vertical = deltaY === 0 ? undefined : clampToMap({ x: origin.x, y: origin.y + Math.sign(deltaY) })
+  const primaryFirst = Math.abs(deltaX) >= Math.abs(deltaY)
+  return [primaryFirst ? horizontal : vertical, primaryFirst ? vertical : horizontal].filter((point): point is MapPoint => Boolean(point))
+}
+
+function isBlocked(state: GameState, blockingUnits: Unit[], origin: MapPoint, point: MapPoint): boolean {
+  if (point.x === origin.x && point.y === origin.y) return false
+  return blockingUnits.some(unit => unit.x === point.x && unit.y === point.y)
+    || state.buildings.some(building => building.x === point.x && building.y === point.y)
 }
 
 function fight(state: GameState): GameState {

@@ -76,4 +76,22 @@ describe('RTS game state', () => {
     expect(state.buildings.some(building => building.id === 2)).toBe(false)
     expect(state.winner).toBe('player')
   })
+
+  it('does not move units through occupied tiles', () => {
+    let state = createInitialState()
+    state = { ...state, selectedIds: [3] }
+    state = issueMove(state, 4, 4)
+    state = stepGame(state)
+
+    expect(state.units.find(unit => unit.id === 3)).toMatchObject({ x: 3, y: 4 })
+  })
+
+  it('uses an alternate open axis when the direct movement step is blocked', () => {
+    let state = createInitialState()
+    state = { ...state, selectedIds: [3] }
+    state = issueMove(state, 7, 5)
+    state = stepGame(state)
+
+    expect(state.units.find(unit => unit.id === 3)).toMatchObject({ x: 3, y: 5 })
+  })
 })

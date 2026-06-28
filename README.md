@@ -73,14 +73,14 @@ Available package scripts:
 ## Known Prototype Limits
 
 - Resource harvesting is abstract income, not worker pathing.
-- Movement is tile-stepped and does not yet do obstacle-aware pathfinding.
+- Movement is tile-stepped with simple collision avoidance, not full pathfinding.
 - Enemy planning is intentionally simple and deterministic for testability.
 - The prototype is silent unless original audio is added later.
 
 ## Roadmap
 
-1. Add obstacle-aware pathfinding and collision handling.
-2. Expand browser interaction coverage into training and combat order flows.
+1. Add broader obstacle-aware pathfinding beyond one-step collision avoidance.
+2. Expand browser interaction coverage into combat resolution and win/loss flows.
 3. Tune UI feedback for selection rings, placement validity, command targets,
    health bars, and resource deltas.
 4. Improve responsive layout for desktop and mobile browser testing.
