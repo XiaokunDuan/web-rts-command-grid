@@ -1,0 +1,4 @@
+node_modules/
+dist/
+.wanman/
+.DS_Store

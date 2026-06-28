@@ -1,0 +1,82 @@
+:root {
+  color: #18201b;
+  background: #e7ece5;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+
+.viewport {
+  padding: 24px;
+  background: #cad8c4;
+}
+
+.grid {
+  height: calc(100vh - 48px);
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  gap: 6px;
+  background: #71856b;
+  padding: 6px;
+}
+
+.base,
+.ore,
+.unit {
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  border: 2px solid #1d2a20;
+}
+
+.player { grid-column: 2 / 4; grid-row: 2 / 4; background: #b6d6f2; }
+.enemy { grid-column: 10 / 12; grid-row: 6 / 8; background: #e7a9a2; }
+.ore { grid-column: 5 / 7; grid-row: 3 / 5; background: #d4c46e; }
+.unit { grid-column: 4 / 5; grid-row: 5 / 6; background: #f2f0de; }
+
+.panel {
+  padding: 20px;
+  border-left: 1px solid #9ba899;
+  background: #f7f8f4;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+dl {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+dl > div {
+  display: flex;
+  justify-content: space-between;
+}
+
+button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #435140;
+  background: #243529;
+  color: #fff;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .shell { grid-template-columns: 1fr; }
+  .panel { border-left: 0; border-top: 1px solid #9ba899; }
+  .grid { height: 62vh; }
+}
