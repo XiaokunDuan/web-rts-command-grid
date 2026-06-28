@@ -112,6 +112,50 @@ describe('browser RTS smoke', () => {
     expect(tileAt(12, 6).querySelector('.command-marker.attack')).not.toBeNull()
   })
 
+  it('issues move orders through touch command controls', async () => {
+    await loadApp()
+    pressTile(tileAt(3, 4))
+
+    const moveButton = document.querySelector<HTMLButtonElement>('[data-command="move"]')!
+    expect(moveButton.disabled).toBe(false)
+
+    moveButton.click()
+    expect(document.querySelector('#status')?.textContent).toContain('Move mode')
+    expect(document.querySelector('#stats')?.textContent).toContain('Modemove')
+
+    pressTile(tileAt(8, 4))
+
+    expect(document.querySelector('#status')?.textContent).toContain('Move order to 8,4.')
+    expect(tileAt(8, 4).querySelector('.command-marker.move')).not.toBeNull()
+    expect(document.querySelector('.unit.player.moving')).not.toBeNull()
+  })
+
+  it('issues attack orders through touch command controls', async () => {
+    await loadApp()
+    pressTile(tileAt(3, 4))
+
+    document.querySelector<HTMLButtonElement>('[data-command="attack"]')!.click()
+    expect(document.querySelector('#status')?.textContent).toContain('Attack mode')
+
+    pressTile(tileAt(12, 6))
+
+    expect(document.querySelector('#status')?.textContent).toContain('Attack order on target 5.')
+    expect(tileAt(12, 6).querySelector('.command-marker.attack')).not.toBeNull()
+    expect(document.querySelector('.unit.player.attacking')).not.toBeNull()
+  })
+
+  it('cancels touch command mode without clearing selection first', async () => {
+    await loadApp()
+    pressTile(tileAt(3, 4))
+    document.querySelector<HTMLButtonElement>('[data-command="move"]')!.click()
+
+    document.querySelector<HTMLButtonElement>('#cancel-command')!.click()
+
+    expect(document.querySelector('#status')?.textContent).toContain('Command mode canceled.')
+    expect(document.querySelector('#stats')?.textContent).toContain('Modecommand')
+    expect(document.querySelector('.unit.player.selected')).not.toBeNull()
+  })
+
   it('previews move commands while hovering with a selected unit', async () => {
     await loadApp()
     pressTile(tileAt(3, 4))

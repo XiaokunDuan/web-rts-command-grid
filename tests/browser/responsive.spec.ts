@@ -100,6 +100,34 @@ test.describe('responsive command grid', () => {
     await expect(page.locator('#stats')).toContainText('Credits60')
   })
 
+  test('supports touch-first move and attack commands on mobile', async ({ page }, testInfo) => {
+    test.skip(!testInfo.project.name.startsWith('mobile'), 'mobile touch controls are covered in mobile projects')
+    await page.goto('/')
+
+    await expect(page.locator('[data-command="move"]')).toBeVisible()
+    await expect(page.locator('[data-command="attack"]')).toBeVisible()
+    await expect(page.locator('#cancel-command')).toBeVisible()
+
+    await page.locator('[data-x="3"][data-y="4"]').tap()
+    await expect(page.locator('#status')).toContainText('Selected unit')
+
+    await page.locator('[data-command="move"]').tap()
+    await expect(page.locator('#status')).toContainText('Move mode')
+    await page.locator('[data-x="8"][data-y="4"]').tap()
+    await expect(page.locator('#status')).toContainText('Move order to 8,4.')
+    await expect(page.locator('[data-x="8"][data-y="4"] .command-marker.move')).toBeVisible()
+
+    await page.locator('[data-command="attack"]').tap()
+    await expect(page.locator('#status')).toContainText('Attack mode')
+    await page.locator('[data-x="12"][data-y="6"]').tap()
+    await expect(page.locator('#status')).toContainText('Attack order on target 5.')
+    await expect(page.locator('[data-x="12"][data-y="6"] .command-marker.attack')).toBeVisible()
+
+    await page.locator('[data-command="move"]').tap()
+    await page.locator('#cancel-command').tap()
+    await expect(page.locator('#status')).toContainText('Command mode canceled.')
+  })
+
   test('surfaces the player defeat flow in the browser', async ({ page }) => {
     await page.goto('/?scenario=player-defeat-smoke')
 

@@ -17,6 +17,7 @@ import {
 type BuildKind = 'refinery' | 'barracks'
 type MapPoint = { x: number; y: number }
 type CommandPreview = MapPoint & { kind: 'move' | 'attack' }
+type CommandMode = CommandPreview['kind']
 
 const BUILD_COSTS: Record<BuildKind, number> = {
   refinery: 220,
@@ -43,6 +44,7 @@ function createScenarioState(): GameState {
 
 let state = createScenarioState()
 let buildMode: BuildKind | null = null
+let commandMode: CommandMode | null = null
 let dragStart: MapPoint | null = null
 let hoverTile: MapPoint | null = null
 let commandPreview: CommandPreview | null = null
@@ -63,10 +65,13 @@ app.innerHTML = `
         <button type="button" data-build="barracks">Build Barracks (260)</button>
         <button type="button" data-train="ranger">Train Ranger (120)</button>
         <button type="button" data-train="lancer">Train Lancer (180)</button>
+        <button type="button" data-command="move">Move</button>
+        <button type="button" data-command="attack">Attack</button>
+        <button type="button" id="cancel-command">Cancel</button>
       </div>
       <div class="help">
         <strong>Controls</strong>
-        <span>Left click selects. Drag selects squads. Right click moves or attacks. Choose a building, then click a tile to place it.</span>
+        <span>Left click selects. Drag selects squads. Right click moves or attacks. On touch screens, select units, choose Move or Attack, then tap a target tile. Choose a building, then click a tile to place it.</span>
       </div>
     </aside>
   </main>
@@ -81,6 +86,7 @@ const actionButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.
 document.querySelectorAll<HTMLButtonElement>('[data-build]').forEach(button => {
   button.addEventListener('click', () => {
     buildMode = button.dataset.build as BuildKind
+    commandMode = null
     commandPreview = null
     status.textContent = `Placing ${buildMode}. Click a clear map tile, or press Escape to cancel.`
     render()
@@ -100,18 +106,46 @@ document.querySelectorAll<HTMLButtonElement>('[data-train]').forEach(button => {
   })
 })
 
-window.addEventListener('keydown', event => {
-  if (event.key === 'Escape') {
-    const hadBuildMode = Boolean(buildMode)
-    const hadSelection = state.selectedIds.length > 0
+document.querySelectorAll<HTMLButtonElement>('[data-command]').forEach(button => {
+  button.addEventListener('click', () => {
+    commandMode = button.dataset.command as CommandMode
     buildMode = null
-    dragStart = null
     commandPreview = null
-    state = { ...state, selectedIds: [] }
-    status.textContent = hadBuildMode ? 'Placement canceled.' : hadSelection ? 'Selection cleared.' : 'Command mode ready.'
+    status.textContent = commandMode === 'move'
+      ? 'Move mode. Tap a destination tile.'
+      : 'Attack mode. Tap an enemy unit or structure.'
     render()
-  }
+  })
 })
+
+document.querySelector<HTMLButtonElement>('#cancel-command')!.addEventListener('click', () => {
+  cancelActiveMode()
+})
+
+window.addEventListener('keydown', event => {
+  if (event.key === 'Escape') cancelActiveMode()
+})
+
+function cancelActiveMode(): void {
+  const hadBuildMode = Boolean(buildMode)
+  const hadCommandMode = Boolean(commandMode)
+  const hadSelection = state.selectedIds.length > 0
+  buildMode = null
+  commandMode = null
+  dragStart = null
+  commandPreview = null
+  if (!hadBuildMode && !hadCommandMode && hadSelection) {
+    state = { ...state, selectedIds: [] }
+  }
+  status.textContent = hadBuildMode
+    ? 'Placement canceled.'
+    : hadCommandMode
+      ? 'Command mode canceled.'
+      : hadSelection
+        ? 'Selection cleared.'
+        : 'Command mode ready.'
+  render()
+}
 
 function tileFromEvent(event: MouseEvent): { x: number; y: number } | null {
   const target = event.target as HTMLElement
@@ -160,6 +194,27 @@ function commandPreviewForTile(current: GameState, tile: MapPoint): CommandPrevi
   return { ...tile, kind: findEnemyAt(current, tile) ? 'attack' : 'move' }
 }
 
+function issueSelectedCommand(tile: MapPoint): boolean {
+  if (!commandMode || state.selectedIds.length === 0) return false
+  if (commandMode === 'move') {
+    commandPreview = { ...tile, kind: 'move' }
+    state = issueMove(state, tile.x, tile.y)
+    status.textContent = `Move order to ${tile.x},${tile.y}.`
+    return true
+  }
+  const enemy = findEnemyAt(state, tile)
+  if (!enemy) {
+    hoverTile = tile
+    commandPreview = null
+    status.textContent = 'Tap an enemy unit or structure to attack.'
+    return true
+  }
+  commandPreview = { ...tile, kind: 'attack' }
+  state = issueAttack(state, enemy.id)
+  status.textContent = `Attack order on target ${enemy.id}.`
+  return true
+}
+
 map.addEventListener('mouseover', event => {
   if (dragStart) return
   const tile = tileFromEvent(event)
@@ -193,6 +248,11 @@ map.addEventListener('mouseup', event => {
       hoverTile = tile
       status.textContent = feedback.message
     }
+    dragStart = null
+    render()
+    return
+  }
+  if (issueSelectedCommand(tile)) {
     dragStart = null
     render()
     return
@@ -237,6 +297,7 @@ function renderStats(current: GameState): void {
   const playerUnits = current.units.filter(unit => unit.team === 'player').length
   const enemyUnits = current.units.filter(unit => unit.team === 'enemy').length
   const activeHarvesters = current.harvesters.filter(worker => worker.team === 'player').length
+  const hasSelection = current.selectedIds.length > 0
   const creditDelta = current.credits - previousCredits
   const creditDeltaText = creditDelta === 0 ? '' : `<span class="stat-delta ${creditDelta > 0 ? 'positive' : 'negative'}">${creditDelta > 0 ? '+' : ''}${creditDelta}</span>`
   previousCredits = current.credits
@@ -245,7 +306,7 @@ function renderStats(current: GameState): void {
     <div><dt>Selected</dt><dd>${selected.length}</dd></div>
     <div><dt>Units</dt><dd>${playerUnits} / ${enemyUnits}</dd></div>
     <div><dt>Harvesters</dt><dd>${activeHarvesters}</dd></div>
-    <div><dt>Mode</dt><dd>${buildMode ?? 'command'}</dd></div>
+    <div><dt>Mode</dt><dd>${buildMode ?? commandMode ?? 'command'}</dd></div>
   `
   if (current.lastDelivery?.team === 'player') {
     delivery.textContent = `Delivered +${current.lastDelivery.amount} credits at ${current.lastDelivery.x},${current.lastDelivery.y}.`
@@ -254,13 +315,18 @@ function renderStats(current: GameState): void {
   }
   for (const button of actionButtons) {
     const trainKind = button.dataset.train as UnitKind | undefined
+    const nextCommandMode = button.dataset.command as CommandMode | undefined
     if (trainKind) {
       const hasBarracks = current.buildings.some(building => building.team === 'player' && building.kind === 'barracks')
       button.disabled = !hasBarracks || current.credits < UNIT_BLUEPRINTS[trainKind].cost
+    } else if (nextCommandMode) {
+      button.disabled = !hasSelection || Boolean(buildMode)
+    } else if (button.id === 'cancel-command') {
+      button.disabled = !buildMode && !commandMode && !hasSelection && !commandPreview
     } else {
       const kind = button.dataset.build
       const cost = kind === 'refinery' ? 220 : 260
-      button.disabled = Boolean(buildMode) || current.credits < cost
+      button.disabled = Boolean(buildMode) || Boolean(commandMode) || current.credits < cost
     }
   }
   if (current.winner) status.textContent = current.winner === 'player' ? 'Victory: rival HQ destroyed.' : 'Defeat: your HQ fell.'
@@ -276,7 +342,9 @@ function renderMap(current: GameState): void {
       const harvesters = current.harvesters.filter(item => item.x === x && item.y === y)
       const tile = { x, y }
       const placementFeedback = buildMode && sameTile(hoverTile, tile) ? getPlacementFeedback(current, buildMode, tile) : null
-      const hoverCommandPreview = !buildMode && current.selectedIds.length > 0 && sameTile(hoverTile, tile) ? commandPreviewForTile(current, tile) : null
+      const hoverCommandPreview = !buildMode && current.selectedIds.length > 0 && sameTile(hoverTile, tile)
+        ? commandMode ? { ...tile, kind: commandMode } : commandPreviewForTile(current, tile)
+        : null
       const issuedCommandPreview = sameTile(commandPreview, tile) ? commandPreview : null
       const visibleCommandPreview = hoverCommandPreview ?? issuedCommandPreview
       const classes = ['tile']

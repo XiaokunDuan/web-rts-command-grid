@@ -20,9 +20,9 @@ choices, and win/loss status.
 The implemented loop includes visible autonomous harvesters, ore depletion,
 delivery feedback, refinery and barracks placement, Ranger and Lancer
 production, single selection, box selection, right-click movement, right-click
-attack orders, HP damage, destroyed-unit cleanup, HQ-based victory checks, and a
-simple enemy planner that builds, produces, targets, and advances toward the
-player.
+attack orders, touch-friendly command buttons, HP damage, destroyed-unit cleanup,
+HQ-based victory checks, and a simple enemy planner that builds, produces,
+targets, and advances toward the player.
 
 See [CHANGELOG.md](CHANGELOG.md) for the concise prototype state history.
 
@@ -50,9 +50,10 @@ sync with the implementation as input handling evolves.
 | Box select multiple units | Left drag on the map |
 | Move selected units | Right click empty terrain |
 | Attack with selected units | Right click an enemy unit or structure |
+| Move or attack on touch screens | Select units, tap Move or Attack, then tap a target tile |
 | Place a building | Click the build button, then click a valid map tile |
 | Train a unit | Select the production building, then click the train button |
-| Cancel pending placement or clear selection | Escape |
+| Cancel pending placement or command mode | Cancel button or Escape |
 
 ## Development
 

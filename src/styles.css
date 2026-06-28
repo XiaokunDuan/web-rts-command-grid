@@ -266,6 +266,7 @@ dl > div {
   display: grid;
   gap: 10px;
   margin: 18px 0;
+  grid-template-columns: 1fr;
 }
 
 button {
@@ -280,6 +281,17 @@ button {
   background: #243529;
   color: #fff;
   font-weight: 700;
+  min-height: 42px;
+}
+
+.actions button[data-command],
+.actions button#cancel-command {
+  background: #3d493b;
+}
+
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: .48;
 }
 
 .help {
@@ -295,4 +307,6 @@ button {
   .shell { grid-template-columns: 1fr; }
   .panel { border-left: 0; border-top: 1px solid #9ba899; }
   .map { height: 66vh; grid-template-columns: repeat(16, minmax(22px, 1fr)); }
+  .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .actions button { min-height: 46px; padding: 10px 8px; }
 }
