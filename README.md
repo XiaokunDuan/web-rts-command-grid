@@ -33,7 +33,8 @@ advances toward the player.
 - A fog-free skirmish map that can be tested quickly in a browser.
 - Simple enemy AI that gathers, builds, produces units, and attacks the player.
 - Responsive web UI with clear controls and readable status panels.
-- Original visuals and either original sound effects or no audio.
+- Original visuals and either no audio or only original/permissively sourced
+  audio that avoids protected franchise names, motifs, music, and effects.
 
 ## Controls
 
@@ -75,7 +76,9 @@ Available package scripts:
 - Resource harvesting is abstract income, not worker pathing.
 - Movement is tile-stepped with simple collision avoidance, not full pathfinding.
 - Enemy planning is intentionally simple and deterministic for testability.
-- The prototype is silent unless original audio is added later.
+- The prototype may remain silent. Any future audio must be original or
+  permissively sourced, and must avoid protected franchise names, motifs, music,
+  and effects.
 
 ## Roadmap
 
@@ -83,5 +86,6 @@ Available package scripts:
 2. Expand browser interaction coverage into combat resolution and win/loss flows.
 3. Tune UI feedback for placement validity, command target previews, and resource deltas.
 4. Improve responsive layout for desktop and mobile browser testing.
-5. Add original audio only if it can be created or sourced without protected
-   material; otherwise keep the prototype silent.
+5. Add audio only if it is original or permissively sourced with no protected
+   franchise names, motifs, music, or effects; otherwise keep the prototype
+   silent.

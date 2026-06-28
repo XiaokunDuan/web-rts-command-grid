@@ -1,8 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createInitialState as createDefaultInitialState } from './game'
 
-async function loadApp() {
+async function loadApp(options: { enemyHqHp?: number } = {}) {
   vi.resetModules()
+  vi.doUnmock('./game')
   document.body.innerHTML = '<div id="app"></div>'
+  if (options.enemyHqHp !== undefined) {
+    vi.doMock('./game', async importOriginal => {
+      const actual = await importOriginal<typeof import('./game')>()
+      return {
+        ...actual,
+        createInitialState: () => {
+          const initial = createDefaultInitialState()
+          return {
+            ...initial,
+            buildings: initial.buildings.map(building => building.team === 'enemy' && building.kind === 'hq'
+              ? { ...building, hp: options.enemyHqHp!, maxHp: options.enemyHqHp! }
+              : building),
+          }
+        },
+      }
+    })
+  }
   await import('./main')
 }
 
@@ -167,5 +186,29 @@ describe('browser RTS smoke', () => {
 
     expect(tileAt(12, 6).querySelector('.unit.enemy')).toBeNull()
     expect(document.querySelectorAll('.unit.enemy')).toHaveLength(1)
+  })
+
+  it('can damage the enemy HQ and surface a victory state', async () => {
+    await loadApp({ enemyHqHp: 144 })
+    tileAt(2, 3).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+    tileAt(5, 5).dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }))
+
+    const enemyHq = tileAt(13, 7)
+    expect(enemyHq.classList.contains('hq')).toBe(true)
+
+    rightClickTile(enemyHq)
+
+    expect(document.querySelector('#status')?.textContent).toContain('Attack order on target 2.')
+    expect(tileAt(13, 7).classList.contains('command-attack')).toBe(true)
+
+    await vi.advanceTimersByTimeAsync(6050)
+
+    expect(tileAt(13, 7).querySelector<HTMLElement>('.building-label .hp-bar > span')?.style.width).not.toBe('100%')
+
+    await vi.advanceTimersByTimeAsync(4400)
+
+    expect(tileAt(13, 7).classList.contains('enemy')).toBe(false)
+    expect(tileAt(13, 7).querySelector('.building-label')).toBeNull()
+    expect(document.querySelector('#status')?.textContent).toContain('Victory: rival HQ destroyed.')
   })
 })
