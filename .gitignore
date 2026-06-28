@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .wanman/
+test-results/
 .DS_Store
 .wanman-run.log
 .wanman-start.sh
