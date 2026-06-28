@@ -94,4 +94,48 @@ describe('RTS game state', () => {
 
     expect(state.units.find(unit => unit.id === 3)).toMatchObject({ x: 3, y: 5 })
   })
+
+  it('routes around a building wall instead of stopping at the first blocked step', () => {
+    const initial = createInitialState()
+    let state = {
+      ...initial,
+      selectedIds: [3],
+      units: initial.units.filter(unit => unit.id === 3).map(unit => ({ ...unit, x: 1, y: 2 })),
+      buildings: [
+        ...initial.buildings,
+        { id: 20, team: 'player' as const, kind: 'refinery' as const, x: 2, y: 1, hp: 100, maxHp: 100 },
+        { id: 21, team: 'player' as const, kind: 'refinery' as const, x: 2, y: 2, hp: 100, maxHp: 100 },
+        { id: 22, team: 'player' as const, kind: 'refinery' as const, x: 2, y: 3, hp: 100, maxHp: 100 },
+      ],
+    }
+
+    state = issueMove(state, 4, 2)
+
+    for (let i = 0; i < 7; i++) state = stepGame(state)
+
+    expect(state.units.find(unit => unit.id === 3)).toMatchObject({ x: 4, y: 2 })
+  })
+
+  it('stops near unreachable movement targets without entering blocked structures', () => {
+    const initial = createInitialState()
+    let state = {
+      ...initial,
+      selectedIds: [3],
+      units: initial.units.filter(unit => unit.id === 3).map(unit => ({ ...unit, x: 1, y: 1 })),
+      buildings: [
+        ...initial.buildings.filter(building => building.id !== 1),
+        { id: 20, team: 'player' as const, kind: 'refinery' as const, x: 2, y: 1, hp: 100, maxHp: 100 },
+        { id: 21, team: 'player' as const, kind: 'refinery' as const, x: 1, y: 2, hp: 100, maxHp: 100 },
+        { id: 22, team: 'player' as const, kind: 'refinery' as const, x: 2, y: 2, hp: 100, maxHp: 100 },
+      ],
+    }
+
+    state = issueMove(state, 2, 2)
+
+    for (let i = 0; i < 4; i++) state = stepGame(state)
+
+    const unit = state.units.find(candidate => candidate.id === 3)
+    expect(unit).toMatchObject({ x: 1, y: 0 })
+    expect(state.buildings.some(building => building.x === unit?.x && building.y === unit?.y)).toBe(false)
+  })
 })

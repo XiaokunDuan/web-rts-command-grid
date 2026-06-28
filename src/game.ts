@@ -200,12 +200,12 @@ function moveUnit(state: GameState, unit: Unit, blockingUnits: Unit[]): Unit {
   if (unit.attackTargetId && !attackTarget) return { ...unit, attackTargetId: undefined, target: undefined }
   if (attackTarget) {
     if (distance(unit, attackTarget) <= unit.range) return { ...unit, target: undefined }
-    const nextPoint = nextOpenStep(state, unit, attackTarget, blockingUnits)
+    const nextPoint = nextPathStep(state, unit, attackTarget, blockingUnits, unit.range)
     return nextPoint ? { ...unit, ...nextPoint, target: undefined } : { ...unit, target: undefined }
   }
   if (!unit.target) return unit
   if (unit.x === unit.target.x && unit.y === unit.target.y) return { ...unit, target: undefined }
-  const nextPoint = nextOpenStep(state, unit, unit.target, blockingUnits)
+  const nextPoint = nextPathStep(state, unit, unit.target, blockingUnits, 0)
   return nextPoint ? { ...unit, ...nextPoint } : unit
 }
 
@@ -213,23 +213,52 @@ function findTargetById(state: GameState, targetId: number): Unit | Building | u
   return state.units.find(target => target.id === targetId) ?? state.buildings.find(target => target.id === targetId)
 }
 
-function nextOpenStep(state: GameState, origin: MapPoint, destination: MapPoint, blockingUnits: Unit[]): MapPoint | undefined {
-  return candidateSteps(origin, destination).find(point => !isBlocked(state, blockingUnits, origin, point))
+function nextPathStep(state: GameState, origin: MapPoint, destination: MapPoint, blockingUnits: Unit[], stopRange: number): MapPoint | undefined {
+  const startKey = pointKey(origin)
+  const visited = new Set([startKey])
+  const queue: Array<{ point: MapPoint; firstStep?: MapPoint }> = [{ point: origin }]
+  let best: { firstStep?: MapPoint; score: number } | undefined
+
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    const score = distance(current.point, destination)
+    if (!best || score < best.score) best = { firstStep: current.firstStep, score }
+    if (score <= stopRange) return current.firstStep
+
+    for (const next of orderedNeighbors(current.point, destination)) {
+      const key = pointKey(next)
+      if (visited.has(key) || isBlocked(state, blockingUnits, origin, next)) continue
+      visited.add(key)
+      queue.push({ point: next, firstStep: current.firstStep ?? next })
+    }
+  }
+
+  return best?.firstStep
 }
 
-function candidateSteps(origin: MapPoint, destination: MapPoint): MapPoint[] {
-  const deltaX = destination.x - origin.x
-  const deltaY = destination.y - origin.y
-  const horizontal = deltaX === 0 ? undefined : clampToMap({ x: origin.x + Math.sign(deltaX), y: origin.y })
-  const vertical = deltaY === 0 ? undefined : clampToMap({ x: origin.x, y: origin.y + Math.sign(deltaY) })
-  const primaryFirst = Math.abs(deltaX) >= Math.abs(deltaY)
-  return [primaryFirst ? horizontal : vertical, primaryFirst ? vertical : horizontal].filter((point): point is MapPoint => Boolean(point))
+function orderedNeighbors(origin: MapPoint, destination: MapPoint): MapPoint[] {
+  return [
+    { x: origin.x + 1, y: origin.y },
+    { x: origin.x - 1, y: origin.y },
+    { x: origin.x, y: origin.y + 1 },
+    { x: origin.x, y: origin.y - 1 },
+  ]
+    .filter(isInsideMap)
+    .sort((a, b) => distance(a, destination) - distance(b, destination) || a.y - b.y || a.x - b.x)
+}
+
+function isInsideMap(point: MapPoint): boolean {
+  return point.x >= 0 && point.x < MAP_WIDTH && point.y >= 0 && point.y < MAP_HEIGHT
 }
 
 function isBlocked(state: GameState, blockingUnits: Unit[], origin: MapPoint, point: MapPoint): boolean {
   if (point.x === origin.x && point.y === origin.y) return false
   return blockingUnits.some(unit => unit.x === point.x && unit.y === point.y)
     || state.buildings.some(building => building.x === point.x && building.y === point.y)
+}
+
+function pointKey(point: MapPoint): string {
+  return `${point.x},${point.y}`
 }
 
 function fight(state: GameState): GameState {
