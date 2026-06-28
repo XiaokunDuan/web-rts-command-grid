@@ -1,5 +1,7 @@
 export type Team = 'player' | 'enemy'
 
+type MapPoint = { x: number; y: number }
+
 export interface Unit {
   id: number
   team: Team
@@ -64,11 +66,11 @@ export function createInitialState(): GameState {
   }
 }
 
-export function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
+export function distance(a: MapPoint, b: MapPoint): number {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
 }
 
-export function clampToMap(point: { x: number; y: number }): { x: number; y: number } {
+export function clampToMap(point: MapPoint): MapPoint {
   return {
     x: Math.max(0, Math.min(MAP_WIDTH - 1, point.x)),
     y: Math.max(0, Math.min(MAP_HEIGHT - 1, point.y)),
@@ -176,7 +178,11 @@ function enemyPlan(state: GameState): GameState {
   }
   return {
     ...next,
-    units: next.units.map(unit => unit.team === 'enemy' && !unit.attackTargetId ? { ...unit, target: nearestPlayerTarget(next, unit) } : unit),
+    units: next.units.map(unit => {
+      if (unit.team !== 'enemy' || unit.attackTargetId) return unit
+      const attackTargetId = nearestOpponentTargetId(next, unit)
+      return attackTargetId ? { ...unit, attackTargetId, target: undefined } : unit
+    }),
   }
 }
 
@@ -184,13 +190,29 @@ function moveUnits(state: GameState): GameState {
   return {
     ...state,
     units: state.units.map(unit => {
+      const attackTarget = unit.attackTargetId ? findTargetById(state, unit.attackTargetId) : undefined
+      if (unit.attackTargetId && !attackTarget) return { ...unit, attackTargetId: undefined, target: undefined }
+      if (attackTarget) {
+        if (distance(unit, attackTarget) <= unit.range) return { ...unit, target: undefined }
+        return { ...unit, ...stepToward(unit, attackTarget), target: undefined }
+      }
       if (!unit.target) return unit
       if (unit.x === unit.target.x && unit.y === unit.target.y) return { ...unit, target: undefined }
-      const dx = unit.target.x === unit.x ? 0 : unit.target.x > unit.x ? 1 : -1
-      const dy = dx === 0 && unit.target.y !== unit.y ? (unit.target.y > unit.y ? 1 : -1) : 0
-      return { ...unit, ...clampToMap({ x: unit.x + dx, y: unit.y + dy }) }
+      return { ...unit, ...stepToward(unit, unit.target) }
     }),
   }
+}
+
+function findTargetById(state: GameState, targetId: number): Unit | Building | undefined {
+  return state.units.find(target => target.id === targetId) ?? state.buildings.find(target => target.id === targetId)
+}
+
+function stepToward(origin: MapPoint, destination: MapPoint): MapPoint {
+  const deltaX = destination.x - origin.x
+  const deltaY = destination.y - origin.y
+  if (Math.abs(deltaX) >= Math.abs(deltaY) && deltaX !== 0) return clampToMap({ x: origin.x + Math.sign(deltaX), y: origin.y })
+  if (deltaY !== 0) return clampToMap({ x: origin.x, y: origin.y + Math.sign(deltaY) })
+  return clampToMap(origin)
 }
 
 function fight(state: GameState): GameState {
@@ -230,13 +252,13 @@ function checkWinner(state: GameState): GameState {
   return state
 }
 
-function nearestPlayerTarget(state: GameState, unit: Unit): { x: number; y: number } {
+function nearestOpponentTargetId(state: GameState, unit: Unit): number | undefined {
   const candidates = [...state.units.filter(u => u.team === 'player'), ...state.buildings.filter(b => b.team === 'player')]
   const target = candidates.sort((a, b) => distance(unit, a) - distance(unit, b))[0]
-  return target ? { x: target.x, y: target.y } : { x: 2, y: 2 }
+  return target?.id
 }
 
-function nearestOpenTile(state: GameState, start: { x: number; y: number }): { x: number; y: number } {
+function nearestOpenTile(state: GameState, start: MapPoint): MapPoint {
   for (let radius = 0; radius < 5; radius++) {
     for (let y = start.y - radius; y <= start.y + radius; y++) {
       for (let x = start.x - radius; x <= start.x + radius; x++) {

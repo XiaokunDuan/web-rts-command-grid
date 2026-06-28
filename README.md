@@ -12,15 +12,16 @@ content.
 
 ## Current State
 
-The current browser build is a Vite/TypeScript scaffold for the RTS prototype.
-It renders an original command-grid layout with a player HQ, resource node,
-starter unit, enemy base marker, status panel, and placeholder build/train
-buttons.
+The current browser build is a playable Vite/TypeScript skirmish prototype. It
+renders a 16x10 command grid with player and enemy HQs, ore nodes, starter
+Ranger units, credits, unit counts, selected-unit state, build mode, and win/loss
+status.
 
-The playable core loop is the active implementation target: resource gathering,
-building placement, production, unit selection, movement, attacks, health, and
-simple enemy AI should be documented here as shipped behavior once they land in
-`src`.
+The implemented loop includes abstract resource income, refinery and barracks
+placement, Ranger production, single selection, box selection, right-click
+movement, right-click attack orders, HP damage, destroyed-unit cleanup, HQ-based
+victory checks, and a simple enemy planner that builds, produces, targets, and
+advances toward the player.
 
 ## Prototype Scope
 
@@ -49,9 +50,6 @@ sync with the implementation as input handling evolves.
 | Train a unit | Select the production building, then click the train button |
 | Cancel pending placement or clear selection | Escape |
 
-The current scaffold displays build and train buttons, but full command handling
-is part of the playable-loop implementation work.
-
 ## Development
 
 Install dependencies, run the browser app, and verify the build/test pipeline:
@@ -67,14 +65,24 @@ Available package scripts:
 
 - `pnpm dev`: start the Vite dev server on `127.0.0.1`.
 - `pnpm build`: run TypeScript checking and create a production build.
-- `pnpm test`: run the Vitest suite once, including pure game-state tests and a jsdom browser smoke test for grid rendering, selection, and command feedback.
+- `pnpm test`: run the Vitest suite once, including pure game-state tests and
+  jsdom browser smoke tests for rendering, selection, movement feedback,
+  drag-selection, and building placement.
 - `pnpm preview`: serve the production build locally.
+
+## Known Prototype Limits
+
+- Resource harvesting is abstract income, not worker pathing.
+- Movement is tile-stepped and does not yet do obstacle-aware pathfinding.
+- Enemy planning is intentionally simple and deterministic for testability.
+- The prototype is silent unless original audio is added later.
 
 ## Roadmap
 
-1. Replace the static scaffold with a playable RTS core loop in `src`.
-2. Expand browser interaction coverage beyond the current smoke test into drag-selection, building placement, training, and combat order flows.
-3. Tune UI feedback for selection rings, placement validity, command targets, health bars, and resource deltas.
+1. Add obstacle-aware pathfinding and collision handling.
+2. Expand browser interaction coverage into training and combat order flows.
+3. Tune UI feedback for selection rings, placement validity, command targets,
+   health bars, and resource deltas.
 4. Improve responsive layout for desktop and mobile browser testing.
 5. Add original audio only if it can be created or sourced without protected
    material; otherwise keep the prototype silent.
