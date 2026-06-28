@@ -23,6 +23,8 @@ selection, box selection, right-click movement, right-click attack orders, HP
 damage, destroyed-unit cleanup, HQ-based victory checks, and a simple enemy
 planner that builds, produces, targets, and advances toward the player.
 
+See [CHANGELOG.md](CHANGELOG.md) for the concise prototype state history.
+
 ## Prototype Scope
 
 - Resource harvesting with a visible economy and spendable command credits.
@@ -77,6 +79,8 @@ Available package scripts:
 ## Known Prototype Limits
 
 - Harvesters are autonomous economy units, not directly selectable combat units.
+- Harvester routes are simple tile steps toward the nearest ore/drop-off, not
+  a player-managed worker command system.
 - Movement is tile-stepped with simple collision avoidance, not full pathfinding.
 - Enemy planning is intentionally simple and deterministic for testability.
 - The prototype may remain silent. Any future audio must be original or
