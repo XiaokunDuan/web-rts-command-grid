@@ -92,8 +92,11 @@ Available package scripts:
 
 ## Roadmap
 
-1. Expand responsive browser coverage as the UI grows.
-2. Add explicit touch/mobile command controls if mobile gameplay becomes a goal.
-3. Add audio only if it is original or permissively sourced with no protected
+1. Make building selection and production context match the controls model.
+2. Spawn trained units from the selected production building and add simple
+   rally targeting.
+3. Expand construction legality rules for base radius, ore, and enemy space.
+4. Expand responsive browser coverage as the UI grows.
+5. Add audio only if it is original or permissively sourced with no protected
    franchise names, motifs, music, or effects; otherwise keep the prototype
    silent.

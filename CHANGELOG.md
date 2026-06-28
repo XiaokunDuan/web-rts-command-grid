@@ -6,6 +6,8 @@
   cost, health, attack range, map marker, UI controls, and test coverage.
 - Added touch-first Move, Attack, and Cancel command controls for mobile
   skirmish play without relying on right-click or Escape.
+- Updated the roadmap so completed touch controls are no longer listed as future
+  work, and the next playable mechanics match the current feedback audit.
 - Added browser coverage for the player defeat flow alongside the existing
   victory and economy coverage.
 - Documented current prototype state at `e0dfede`: visible autonomous
